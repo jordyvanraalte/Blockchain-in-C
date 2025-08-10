@@ -3,16 +3,19 @@
 
 #include <stdint.h>
 
+typedef struct KeyPair {
+    uint8_t privateKey[32]; // 256 bits for private key
+    uint8_t publicKey[32]; // 256 bits for public key
+} KeyPair;
+
 typedef struct Address {
-    int id;
     char* address;
-    uint8_t privateKeyRaw[32]; // 256 bits for private key
-    uint8_t publicKeyRaw[32]; // 256 bits for public key
-    char publicKey[65]; 
-    char privateKey[65];
+    KeyPair keyPair; 
     uint64_t balance;
 } Address;
 
 
+Address* createAddress();
+void freeAddress(Address* address);
 
-#endif // WALLET_H
+#endif // ADDRESS_H
