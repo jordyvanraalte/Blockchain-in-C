@@ -8,13 +8,10 @@ void test_generate_key_pair(void) {
     EVP_PKEY_free(key);
 }
 
-//https://cunit.sourceforge.net/doc/index.html
-int main() {
-    CU_initialize_registry();
-    CU_pSuite suite = CU_add_suite("Cryptography Tests", NULL, NULL);
-    CU_add_test(suite, "test_generate_key_pair", test_generate_key_pair);
-    CU_basic_run_tests();
-    CU_cleanup_registry();
-    return 0;
+void test_to_base64(void) {
+    const unsigned char *input = "Hello, World!";
+    char *base64 = toBase64(input, strlen(input));
+    CU_ASSERT_PTR_NOT_NULL(base64);
+    CU_ASSERT_STRING_EQUAL(base64, "SGVsbG8sIFdvcmxkIQ==");
+    free(base64);
 }
-

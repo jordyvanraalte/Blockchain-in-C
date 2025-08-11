@@ -44,15 +44,91 @@ void freeKeyPair(EVP_PKEY* pkey) {
     }
 }
 
+char* getPEMFormat(EVP_PKEY* pkey, enum KeyType keyType) {
+    BIO *bio = BIO_new(BIO_s_mem());
+    if (!bio) {
+        fprintf(stderr, "Error creating BIO\n");
+        return NULL;
+    }
 
+    if (keyType == PUBLIC_KEY) {
+        if (PEM_write_bio_PUBKEY(bio, pkey) <= 0) {
+            BIO_free(bio);
+            fprintf(stderr, "Error writing public key to BIO\n");
+            return NULL;
+        }
+    } else if (keyType == PRIVATE_KEY) {
+        if (PEM_write_bio_PrivateKey(bio, pkey, NULL, NULL, 0, NULL, NULL) <= 0) {
+            BIO_free(bio);
+            fprintf(stderr, "Error writing private key to BIO\n");
+            return NULL;
+        }
+    } else {
+        BIO_free(bio);
+        fprintf(stderr, "Invalid key type specified\n");
+        return NULL;
+    }
 
-// void keyToFile(EVP_PKEY* pkey, const char* filename, enum KeyType keyType) {
-//     BIO *bio = NULL;
-//     FILE *file = fopen(filename, "wb");
-//     if (!file) {
-//         fprintf(stderr, "Error opening file %s for writing\n", filename);
-//         return; 
-//     }
+    // Get the PEM formatted string from the BIO
+    BUF_MEM *buf;
+    BIO_get_mem_ptr(bio, &buf);
+    char *pemString = malloc(buf->length + 1);
+    if (!pemString) {
+        BIO_free(bio);
+        fprintf(stderr, "Memory allocation failed for PEM string\n");
+        return NULL;
+    }
+    
+    memcpy(pemString, buf->data, buf->length);
+    pemString[buf->length] = '\0'; // Null-terminate the string
 
+    BIO_free(bio);
+    return pemString;
+}
 
-// }
+char* toBase64(const unsigned char* input, size_t length) {
+    BIO *bio, *b64;
+    BUF_MEM *bufferPtr;
+
+    b64 = BIO_new(BIO_f_base64());
+    if (!b64) {
+        fprintf(stderr, "Error creating base64 BIO\n");
+        return NULL;
+    }
+
+    bio = BIO_new(BIO_s_mem());
+    if (!bio) {
+        BIO_free(b64);
+        fprintf(stderr, "Error creating memory BIO\n");
+        return NULL;
+    }
+
+    bio = BIO_push(b64, bio);
+    BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL); // No newlines in output
+
+    if (BIO_write(bio, input, length) <= 0) {
+        BIO_free_all(bio);
+        fprintf(stderr, "Error writing to base64 BIO\n");
+        return NULL;
+    }
+
+    if (BIO_flush(bio) <= 0) {
+        BIO_free_all(bio);
+        fprintf(stderr, "Error flushing base64 BIO\n");
+        return NULL;
+    }
+
+    BIO_get_mem_ptr(bio, &bufferPtr);
+    char *base64String = malloc(bufferPtr->length + 1);
+    if (!base64String) {
+        BIO_free_all(bio);
+        fprintf(stderr, "Memory allocation failed for base64 string\n");
+        return NULL;
+    }
+
+    memcpy(base64String, bufferPtr->data, bufferPtr->length);
+    base64String[bufferPtr->length] = '\0'; // Null-terminate the string
+
+    BIO_free_all(bio);
+    return base64String;
+}

@@ -2,18 +2,15 @@
 #define ADDRESS_H
 
 #include <stdint.h>
-
-typedef struct KeyPair {
-    uint8_t privateKey[32]; // 256 bits for private key
-    uint8_t publicKey[32]; // 256 bits for public key
-} KeyPair;
+#include "../utils/cryptography.h"
 
 typedef struct Address {
-    char* address;
-    KeyPair keyPair; 
+    char* address; // Base64 of public key, can be used as an address
+    EVP_PKEY* keys; // Pointer to the public/private key pair
+    char* publicKey; // Public key in PEM format, reprents the address
+    char* privateKey; // Private key in PEM format, should be kept secret
     uint64_t balance;
 } Address;
-
 
 Address* createAddress();
 void freeAddress(Address* address);
