@@ -1,7 +1,9 @@
 #ifndef BLOCK_H
 #define BLOCK_H
 
+#include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <time.h>
 #include "transaction.h"
 
@@ -15,5 +17,9 @@ typedef struct Block {
     struct transaction* transactions;
     char* notes;
 } Block;
+
+char* serializeBlock(Block* block);
+char* calculateBlockHash(Block* block);
+bool isValidBlock(Block* block);
 
 #endif // BLOCK_H

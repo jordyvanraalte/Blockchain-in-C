@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <time.h>
+#include <stdbool.h>
 
 typedef struct TxInput {
     int id;
@@ -36,7 +37,17 @@ typedef struct Transaction {
 
     char hash[65]; // SHA-256 hash is 64 characters + null terminator
 
+    bool isCoinbase; // Indicates if this is a coinbase transaction
     struct Transaction* next;
 } Transaction;
+
+Transaction* createGenesisTransaction();
+bool isValidTransaction(Transaction* transaction);
+bool validateInputs(Transaction* transaction);
+bool validateOutputs(Transaction* transaction);
+bool validateSignatures(Transaction* transaction);
+bool validateMultisig(Transaction* transaction);
+int getTotalInputAmount(Transaction* transaction);
+int getTotalOutputAmount(Transaction* transaction);
 
 #endif // TRANSACTION_H

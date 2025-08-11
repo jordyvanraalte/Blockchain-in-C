@@ -132,3 +132,8 @@ char* toBase64(const unsigned char* input, size_t length) {
     BIO_free_all(bio);
     return base64String;
 }
+
+char* calcualateSHA256Hash(const unsigned char* data, size_t length) {
+    uint8_t hash[SHA256_DIGEST_LENGTH]; // SHA-256 produces a 256-bit hash (32 bytes)  
+    return SHA256(data, length, hash);
+}

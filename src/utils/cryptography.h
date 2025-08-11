@@ -12,6 +12,7 @@ enum KeyType {
 EVP_PKEY* generateKeyPair();
 char* getPEMFormat(EVP_PKEY* pkey, enum KeyType keyType);
 char* toBase64(const unsigned char* input, size_t length);
+char* calcualateSHA256(const unsigned char* data, size_t length);
 void freeKeyPair(EVP_PKEY* pkey);
 
 #endif // CRYPTOGRAPHY_H
