@@ -44,6 +44,8 @@ void freeKeyPair(EVP_PKEY* pkey) {
     }
 }
 
+
+
 // void keyToFile(EVP_PKEY* pkey, const char* filename, enum KeyType keyType) {
 //     BIO *bio = NULL;
 //     FILE *file = fopen(filename, "wb");
