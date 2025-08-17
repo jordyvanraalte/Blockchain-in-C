@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <time.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 typedef struct TxInput {
     int id;
@@ -17,10 +18,10 @@ typedef struct TxOutput {
     uint64_t amount;
 } TxOutput;
 
-//ECDSA Signature structure
 typedef struct Signature {
-    uint8_t r[32]; // 256 bits for r
-    uint8_t s[32]; // 256 bits for s
+    char* publicKey; // Public key of the signer
+    char* signature; // Signature in base64 format
+    struct Signature* next; // Pointer to the next signature in a linked list
 } Signature;
 
 typedef struct Transaction {

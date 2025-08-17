@@ -19,14 +19,14 @@ bool isValidBlock(Block* block) {
         return false;
     }
 
-    Transaction* currentTransaction = block->transactions;
-    while (currentTransaction) {
+    // Transaction* currentTransaction = block->transactions;
+    // while (currentTransaction) {
         
-    }
+    // }
 
-    // Check if the block's hash is valid
+    // // Check if the block's hash is valid
 
-    return isValid;
+    return true;
 }
 
 
@@ -69,7 +69,7 @@ char* calculateBlockHash(Block* block) {
     char* serializedBlock = serializeBlock(block);
     if (!serializedBlock) return NULL;
 
-    char* hash = calcualateSHA256((unsigned char*)serializedBlock, strlen(serializedBlock));
+    char* hash = calcualateSHA256Hash((unsigned char*)serializedBlock, strlen(serializedBlock));
     free(serializedBlock); // Free the serialized block string after hashing
 
     if (!hash) {

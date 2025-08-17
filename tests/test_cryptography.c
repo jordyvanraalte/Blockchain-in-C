@@ -15,3 +15,41 @@ void test_to_base64(void) {
     CU_ASSERT_STRING_EQUAL(base64, "SGVsbG8sIFdvcmxkIQ==");
     free(base64);
 }
+
+void test_succesful_sign_and_verify(void) {
+    EVP_PKEY *key = generateKeyPair();
+    CU_ASSERT_PTR_NOT_NULL(key);
+
+    const unsigned char *message = (unsigned char *)"Test message";
+    unsigned char *signature = NULL;
+    size_t siglen = 0;
+
+    int sign_result = sign(message, strlen((char *)message), key, &signature, &siglen);
+    CU_ASSERT_EQUAL(sign_result, 1);
+    CU_ASSERT_PTR_NOT_NULL(signature);
+
+    int verify_result = verify(key, message, strlen((char *)message), signature, siglen);
+    CU_ASSERT_EQUAL(verify_result, 1);
+
+    OPENSSL_free(signature);
+    EVP_PKEY_free(key);
+}
+
+void test_failed_verify(void) {
+    EVP_PKEY *key = generateKeyPair();
+    CU_ASSERT_PTR_NOT_NULL(key);
+
+    const unsigned char *message = (unsigned char *)"Test message";
+    unsigned char *signature = NULL;
+    size_t siglen = 0;  
+    int sign_result = sign(message, strlen((char *)message), key, &signature, &siglen);
+    CU_ASSERT_EQUAL(sign_result, 1);
+
+    // Modify the message to create a failed verification case
+    const unsigned char *modified_message = (unsigned char *)"Modified message";
+    int verify_result = verify(key, modified_message, strlen((char *)modified_message), signature, siglen);
+    CU_ASSERT_EQUAL(verify_result, 0);
+
+    OPENSSL_free(signature);
+    EVP_PKEY_free(key);
+}

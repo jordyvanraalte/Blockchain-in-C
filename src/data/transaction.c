@@ -55,7 +55,14 @@ bool isValidTransaction(Transaction* transaction) {
     }
 
 
+
+
     // Additional validation logic can be added here
 
     return true; // Placeholder for actual validation logic
+}
+
+
+bool validateInputs(Transaction* transaction) {
+   
 }

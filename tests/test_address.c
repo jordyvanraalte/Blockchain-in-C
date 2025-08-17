@@ -9,7 +9,6 @@ void test_create_address(void) {
     CU_ASSERT_PTR_NOT_NULL(address->publicKey);
     CU_ASSERT_PTR_NOT_NULL(address->privateKey);
     CU_ASSERT_EQUAL(address->balance, 0);
-    
     freeAddress(address); // Clean up after test
 }
 

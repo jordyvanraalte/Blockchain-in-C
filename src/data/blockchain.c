@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <time.h>
+#include <stdlib.h>
 #include "block.h"
 #include "transaction.h"
 

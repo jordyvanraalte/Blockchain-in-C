@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <time.h>
 #include "transaction.h"
+#include "../utils/cryptography.h"
 
 typedef struct Block {
     int id;
