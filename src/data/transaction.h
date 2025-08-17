@@ -5,6 +5,7 @@
 #include <time.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include "../utils/cryptography.h"
 
 typedef struct TxInput {
     int id;
@@ -19,26 +20,30 @@ typedef struct TxOutput {
 } TxOutput;
 
 typedef struct Signature {
+    int inputId; // ID of the input this signature is for
+    char* message; // Message that was signed
     char* publicKey; // Public key of the signer
     char* signature; // Signature in base64 format
-    struct Signature* next; // Pointer to the next signature in a linked list
+    size_t signatureLength; // Length of the signature
 } Signature;
 
 typedef struct Transaction {
     int id;
     time_t timestamp;
     
+    // Transaction logic
     int inputCount;
     TxInput* inputs;
     int outputCount;     
     TxOutput* outputs; 
-
     int signatureCount;
     Signature* signatures;
 
+    // TODO add multisig support
+
     char hash[65]; // SHA-256 hash is 64 characters + null terminator
 
-    bool isCoinbase; // Indicates if this is a coinbase transaction
+    bool isCoinbase; // Indicates if this is a coinbase transaction. A coinbase transaction is the first transaction in a block, which creates new coins.
     struct Transaction* next;
 } Transaction;
 
