@@ -138,7 +138,6 @@ char* calcualateSHA256Hash(const unsigned char* data, size_t length) {
     return SHA256(data, length, hash);
 }
 
-
 /*
 This method is for signing a message using a private key.
 It uses the OpenSSL EVP_PKEY API to create a digital signature for the given message.
