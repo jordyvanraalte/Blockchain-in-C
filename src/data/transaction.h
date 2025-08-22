@@ -8,13 +8,13 @@
 #include "../utils/cryptography.h"
 
 typedef struct TxInput {
-    int id;
+    char* id;
     char* address;
     uint64_t amount;
 } TxInput;
 
 typedef struct TxOutput {
-    int id;
+    char* id;
     char* address;
     uint64_t amount;
 } TxOutput;
@@ -28,7 +28,7 @@ typedef struct Signature {
 } Signature;
 
 typedef struct Transaction {
-    int id;
+    char* id; // Unique identifier for the transaction in uuid format, size 36 + null terminator
     time_t timestamp;
     
     // Transaction logic

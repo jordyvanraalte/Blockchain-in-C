@@ -14,7 +14,7 @@ enum KeyType {
 EVP_PKEY* generateKeyPair();
 char* getPEMFormat(EVP_PKEY* pkey, enum KeyType keyType);
 char* toBase64(const unsigned char* input, size_t length);
-char* calcualateSHA256Hash(const unsigned char* data, size_t length);
+int calculateSHA256(const void *data, size_t length, unsigned char out[SHA256_DIGEST_LENGTH]);
 int verify(EVP_PKEY *key,
            const unsigned char *msg, size_t msglen,
            const unsigned char *sig, size_t slen);
@@ -23,5 +23,6 @@ int sign(const unsigned char *msg, size_t msglen,
 int getPublicKeyFromBase64(const char *base64, EVP_PKEY **pkey);
 char* toBase64FromPublicKey(EVP_PKEY *pkey);
 void freeKeyPair(EVP_PKEY* pkey);        
+char* sha256Base64(const void *data, size_t length);
 
 #endif // CRYPTOGRAPHY_H

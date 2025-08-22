@@ -195,11 +195,16 @@ int getPublicKeyFromBase64(const char *base64, EVP_PKEY **pkey) {
        
 }
 
+int calculateSHA256(const void *data, size_t length, unsigned char out[SHA256_DIGEST_LENGTH]) {
+    if ((!data && length) || !out) return 0;
+    if (!SHA256((const unsigned char*)data, length, out)) return 0;
+    return 1;
+}
 
-
-char* calcualateSHA256Hash(const unsigned char* data, size_t length) {
-    uint8_t hash[SHA256_DIGEST_LENGTH]; // SHA-256 produces a 256-bit hash (32 bytes)  
-    return SHA256(data, length, hash);
+char* sha256Base64(const void *data, size_t length) {
+    unsigned char digest[SHA256_DIGEST_LENGTH];
+    if (!calculateSHA256(data, length, digest)) return NULL;
+    return toBase64(digest, SHA256_DIGEST_LENGTH); 
 }
 
 /*

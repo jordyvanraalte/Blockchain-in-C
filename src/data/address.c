@@ -4,38 +4,51 @@
 #include "../utils/cryptography.h"
 
 Address* createAddress() {
-    EVP_PKEY* keyPair = generateKeyPair();
+    EVP_PKEY* keyPair = NULL;
+    char* pemPublicKey = NULL;
+    char* pemPrivateKey = NULL;
+    unsigned char* addressHash = NULL;
+    Address* address = NULL;
+    char* addressHashBase64 = NULL;
+
+    // Generate key pair
+    keyPair = generateKeyPair();
     if (!keyPair) {
         fprintf(stderr, "Failed to generate key pair\n");
-        return NULL;
+        goto error;
     }
 
-    char* pemPublicKey = getPEMFormat(keyPair, PUBLIC_KEY);
-    char* pemPrivateKey = getPEMFormat(keyPair, PRIVATE_KEY);
+    pemPublicKey = getPEMFormat(keyPair, PUBLIC_KEY);
+    pemPrivateKey = getPEMFormat(keyPair, PRIVATE_KEY);
     if (!pemPublicKey || !pemPrivateKey) {
         fprintf(stderr, "Failed to get PEM format for keys\n");
-        freeKeyPair(keyPair);
-        return NULL;
+        goto error;
     }
 
-    Address* address = malloc(sizeof(Address));
+    address = malloc(sizeof(Address));
     if (!address) {
         fprintf(stderr, "Memory allocation failed for Address\n");
-        free(pemPublicKey);
-        free(pemPrivateKey);
-        freeKeyPair(keyPair);
-        return NULL;
+        goto error;
     }
 
-    //address actually should be base64 of bytes of public key
-    //This is a placeholder, you should implement the actual conversion logic
-    address->address = toBase64((unsigned char*)pemPublicKey, strlen(pemPublicKey)); 
-    address->keys = keyPair; 
+    // Compute public key hash for address
+    char* hash = sha256Base64(pemPublicKey, strlen(pemPublicKey));
+
+    address->address = hash; // Store the hash as address
+    address->keys = keyPair; // Store the key pair in the address
     address->publicKey = pemPublicKey;
     address->privateKey = pemPrivateKey;
     address->balance = 0; // Initialize balance to 0
 
     return address;
+
+error:
+    if (pemPublicKey) free(pemPublicKey);
+    if (pemPrivateKey) free(pemPrivateKey);
+    if (keyPair) freeKeyPair(keyPair);
+    if (address) free(address);
+    if (addressHash) free(addressHash);
+    return NULL;
 }
 
 void freeAddress(Address* address) {

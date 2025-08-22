@@ -5,7 +5,7 @@
 #include "../utils/cryptography.h"
 
 typedef struct Address {
-    char* address; // Base64 of public key, can be used as an address
+    char* address; // SHA256 hash of the public key in base64 format, represents the address
     EVP_PKEY* keys; // Pointer to the public/private key pair
     char* publicKey; // Public key in PEM format, reprents the address
     char* privateKey; // Private key in PEM format, should be kept secret

@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include "../utils/cryptography.h"
+#include "../utils/uuid.h"
 
 Transaction* createGenesisTransaction() {
     Transaction* genesisTransaction = malloc(sizeof(Transaction));
@@ -16,11 +17,9 @@ Transaction* createGenesisTransaction() {
     return genesisTransaction;
 }
 
-//TODO CHANGE DATABTYPES
 
-int createTransaction(Transaction* transaction) {
+int createTransaction(Transaction** transaction) {
     
-
     return 0; // Success
 }
 
@@ -105,40 +104,42 @@ int signInput(Signature** signature, TxInput* input, Transaction* transaction, c
         return -1; // Error code for serialization failure
     }
 
-    unsigned char* hash = calcualateSHA256Hash(transactionData, transactionLength);
-    free(transactionData); // Free the serialized transaction data after hashing
+    // char hash = NULL;
+    // // Calculate SHA256 hash of the transaction data
+    // calculateSHA256(transactionData, transactionLength, &hash);
+    // free(transactionData); // Free the serialized transaction data after hashing
 
-    if (!hash) {
-        fprintf(stderr, "Failed to calculate hash for transaction\n");
-        return -1; // Error code for hash calculation failure
-    }
+    // if (!hash) {
+    //     fprintf(stderr, "Failed to calculate hash for transaction\n");
+    //     return -1; // Error code for hash calculation failure
+    // }
 
-    size_t msglen = strlen(hash);
-    unsigned char* sig = NULL;
-    size_t siglen = 0;
+    // size_t msglen = strlen(hash);
+    // unsigned char* sig = NULL;
+    // size_t siglen = 0;
 
-    // Sign the message
-    int sign_result = sign((unsigned char*)hash, msglen, privateKey, &sig, &siglen);
+    // // Sign the message
+    // int sign_result = sign((unsigned char*)hash, msglen, privateKey, &sig, &siglen);
 
-    if (sign_result != 1) {
-        fprintf(stderr, "Signing failed\n");
-        return -1; // Error code for signing failure
-    }
+    // if (sign_result != 1) {
+    //     fprintf(stderr, "Signing failed\n");
+    //     return -1; // Error code for signing failure
+    // }
 
     // Allocate memory for the signature
-    (*signature)->inputId = input->id;
-    (*signature)->message = strdup(hash);
-    (*signature)->publicKey = strdup(publicKey);
-    (*signature)->signature = toBase64(sig, siglen); // Convert signature to base64
-    (*signature)->signatureLength = siglen;
+    //(*signature)->inputId = input->id;
+    // (*signature)->message = strdup(hash);
+    // (*signature)->publicKey = strdup(publicKey);
+    // (*signature)->signature = toBase64(sig, siglen); // Convert signature to base64
+    // (*signature)->signatureLength = siglen;
 
-    // Free the signature buffer
-    OPENSSL_free(sig);
-    sig = NULL; // Avoid dangling pointer
-    if (!(*signature)->signature) {
-        fprintf(stderr, "Failed to convert signature to base64\n");
-        return -1; // Error code for base64 conversion failure
-    }
+    // // Free the signature buffer
+    // OPENSSL_free(sig);
+    // sig = NULL; // Avoid dangling pointer
+    // if (!(*signature)->signature) {
+    //     fprintf(stderr, "Failed to convert signature to base64\n");
+    //     return -1; // Error code for base64 conversion failure
+    // }
 
     return 0; // Success
 }
