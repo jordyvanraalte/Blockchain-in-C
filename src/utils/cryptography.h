@@ -4,6 +4,7 @@
 #include <openssl/evp.h>
 #include <openssl/err.h>
 #include <openssl/pem.h>
+#include <openssl/bio.h>
 
 enum KeyType {
     PUBLIC_KEY,
@@ -19,6 +20,8 @@ int verify(EVP_PKEY *key,
            const unsigned char *sig, size_t slen);
 int sign(const unsigned char *msg, size_t msglen,
             EVP_PKEY *key, unsigned char **sig, size_t *slen);
+int getPublicKeyFromBase64(const char *base64, EVP_PKEY **pkey);
+char* toBase64FromPublicKey(EVP_PKEY *pkey);
 void freeKeyPair(EVP_PKEY* pkey);        
 
 #endif // CRYPTOGRAPHY_H

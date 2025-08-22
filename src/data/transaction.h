@@ -22,7 +22,7 @@ typedef struct TxOutput {
 typedef struct Signature {
     int inputId; // ID of the input this signature is for
     char* message; // Message that was signed
-    char* publicKey; // Public key of the signer
+    char* publicKey; // Public key of the signer in base64 format
     char* signature; // Signature in base64 format
     size_t signatureLength; // Length of the signature
 } Signature;
@@ -55,5 +55,6 @@ bool validateSignatures(Transaction* transaction);
 bool validateMultisig(Transaction* transaction);
 int getTotalInputAmount(Transaction* transaction);
 int getTotalOutputAmount(Transaction* transaction);
+int serializeTransaction(Transaction* transaction, unsigned char** buffer, size_t* length);
 
 #endif // TRANSACTION_H

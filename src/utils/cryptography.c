@@ -133,6 +133,70 @@ char* toBase64(const unsigned char* input, size_t length) {
     return base64String;
 }
 
+char* toBase64FromPublicKey(EVP_PKEY *pkey) {
+    if (!pkey) {
+        fprintf(stderr, "Invalid EVP_PKEY pointer\n");
+        return NULL;
+    }
+
+    // Get the public key in PEM format
+    char *pemPublicKey = getPEMFormat(pkey, PUBLIC_KEY);
+    if (!pemPublicKey) {
+        fprintf(stderr, "Failed to get PEM format for public key\n");
+        return NULL;
+    }
+
+    // Convert the PEM public key to base64
+    char *base64PublicKey = toBase64((unsigned char *)pemPublicKey, strlen(pemPublicKey));
+    free(pemPublicKey); // Free the PEM string after conversion
+
+    return base64PublicKey;
+}
+
+int getPublicKeyFromPEM(const char *pem, EVP_PKEY **pkey) {
+    if (!pem || !pkey) return 0;
+
+    BIO *bio = BIO_new_mem_buf(pem, -1);
+    if (!bio) return 0;
+
+    *pkey = PEM_read_bio_PUBKEY(bio, NULL, NULL, NULL);
+    BIO_free(bio);
+
+    if (!*pkey) {
+        fprintf(stderr, "Failed to read public key from PEM\n");
+        return 0;
+    }
+
+    return 1; // success
+}
+
+int getPublicKeyFromBase64(const char *base64, EVP_PKEY **pkey) {
+    
+    // setup bio
+    BIO *bio, *b64;
+    size_t base64Length = strlen(base64);
+    
+    // save upper bound for base64 length
+    char *pem = malloc(base64Length + 1);
+    b64 = BIO_new(BIO_f_base64());
+    bio = BIO_new_mem_buf(base64, -1);
+    bio = BIO_push(b64, bio);
+    BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL); // No newlines in input
+    int pemLength = BIO_read(bio, pem, base64Length);
+    pem[pemLength] = '\0'; // Null-terminate the PEM string
+
+    BIO_free_all(bio);
+
+    // Now convert PEM to EVP_PKEY
+    int result = getPublicKeyFromPEM(pem, pkey);
+    free(pem); // Free the PEM string after conversion
+
+    return result; // Return the result of PEM to EVP_PKEY conversion
+       
+}
+
+
+
 char* calcualateSHA256Hash(const unsigned char* data, size_t length) {
     uint8_t hash[SHA256_DIGEST_LENGTH]; // SHA-256 produces a 256-bit hash (32 bytes)  
     return SHA256(data, length, hash);
@@ -143,8 +207,7 @@ This method is for signing a message using a private key.
 It uses the OpenSSL EVP_PKEY API to create a digital signature for the given message.
 The signature is created using the SHA-256 hash function.
 */
-int sign(const unsigned char *msg, size_t msglen,
-    EVP_PKEY *key, unsigned char **sig, size_t *slen) {
+int sign(const unsigned char *msg, size_t msglen, EVP_PKEY *key, unsigned char **sig, size_t *slen) {
 
     EVP_MD_CTX *mdctx = NULL;
     int ret = 0;
@@ -185,12 +248,8 @@ int sign(const unsigned char *msg, size_t msglen,
 
     return ret;
 }
-     
 
-
-int verify(EVP_PKEY *key,
-           const unsigned char *msg, size_t msglen,
-           const unsigned char *sig, size_t slen) {
+int verify(EVP_PKEY *key, const unsigned char *msg, size_t msglen, const unsigned char *sig, size_t slen) {
     EVP_MD_CTX *mdctx = NULL;
     int ret = 0;
 

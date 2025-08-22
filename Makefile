@@ -1,7 +1,7 @@
 # Compiler definitions
 CC := gcc
 CFLAGS := -Wall -Wextra -g
-LDFLAGS := -lcrypto
+LDFLAGS := -lcrypto -luuid
 OPENSSL_LIBS := -lcrypto
 CUNIT_LIBS = -lcunit
 MAIN_SRC := src/main.c
@@ -47,7 +47,7 @@ SRC_OBJS_NO_MAIN := $(SRC_NO_MAIN:%=$(BUILD_DIR)/%.o)
 
 $(TARGET_TESTS): $(SRC_OBJS_NO_MAIN) $(TEST_OBJS)
 	mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(INC_FLAGS) -o $@ $^ $(OPENSSL_LIBS) $(CUNIT_LIBS)
+	$(CC) $(CFLAGS) $(INC_FLAGS) -o $@ $^ $(OPENSSL_LIBS) $(CUNIT_LIBS) $(LDFLAGS)
 
 # Run tests
 test: $(TARGET_TESTS)

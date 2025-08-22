@@ -18,6 +18,14 @@ Transaction* createGenesisTransaction() {
 
 //TODO CHANGE DATABTYPES
 
+int createTransaction(Transaction* transaction) {
+    
+
+    return 0; // Success
+}
+
+
+
 int addTransactionInput(Transaction* transaction, TxInput input) {
     if (!transaction) {
         fprintf(stderr, "Transaction is NULL\n");
@@ -240,7 +248,16 @@ bool validateInputs(Transaction* transaction) {
             Signature* signature = &transaction->signatures[j];
             if (signature->inputId == inputs[i].id) {
                 // Verify the signature
-                if (verify(signature->publicKey, (unsigned char*)signature->message, 
+
+                EVP_PKEY *key = NULL;
+                // Convert public key from base64 to EVP_PKEY
+                getPublicKeyFromBase64(signature->publicKey, &key);
+                if (!key) {
+                    fprintf(stderr, "Failed to convert public key from base64\n");
+                    return false; // Error in public key conversion
+                }
+
+                if (verify(key, (unsigned char*)signature->message, 
                            strlen(signature->message), signature->signature, signature->signatureLength)) {
                     found = true;
                     break; // Valid signature found for this input

@@ -53,3 +53,36 @@ void test_failed_verify(void) {
     OPENSSL_free(signature);
     EVP_PKEY_free(key);
 }
+
+void test_get_base64_from_public_key(void) {
+    EVP_PKEY *key = generateKeyPair();
+    CU_ASSERT_PTR_NOT_NULL(key);
+    char *pemPublicKey = getPEMFormat(key, PUBLIC_KEY);
+    char *base64PublicKey = toBase64((unsigned char *)pemPublicKey, strlen(pemPublicKey));
+    CU_ASSERT_PTR_NOT_NULL(base64PublicKey);
+    CU_ASSERT_STRING_NOT_EQUAL(base64PublicKey, "");
+    free(pemPublicKey);
+    free(base64PublicKey);
+    EVP_PKEY_free(key);
+}
+
+void test_get_public_key_from_base64(void) {
+    EVP_PKEY *key = generateKeyPair();
+    CU_ASSERT_PTR_NOT_NULL(key);
+    
+    char *pemPublicKey = getPEMFormat(key, PUBLIC_KEY);
+    CU_ASSERT_PTR_NOT_NULL(pemPublicKey);
+    
+    char *base64PublicKey = toBase64((unsigned char *)pemPublicKey, strlen(pemPublicKey));
+    CU_ASSERT_PTR_NOT_NULL(base64PublicKey);
+    
+    EVP_PKEY *retrievedKey = NULL; 
+    getPublicKeyFromBase64(base64PublicKey, &retrievedKey);
+    CU_ASSERT_PTR_NOT_NULL(retrievedKey);
+    
+    // Clean up
+    OPENSSL_free(base64PublicKey);
+    free(pemPublicKey);
+    EVP_PKEY_free(key);
+    EVP_PKEY_free(retrievedKey);
+}
