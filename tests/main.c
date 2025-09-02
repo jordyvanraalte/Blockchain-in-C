@@ -4,6 +4,7 @@
 #include "test_cryptography.h"
 #include "test_address.h"
 #include "test_uuid.h"
+#include "test_transaction.h"
 
 int main() {
     CU_initialize_registry();
@@ -21,6 +22,14 @@ int main() {
 
     CU_pSuite uuidSuite = CU_add_suite("UUID Tests", NULL, NULL);
     CU_add_test(uuidSuite, "test_generate_uuid", test_generate_uuid);
+
+    CU_pSuite s = CU_add_suite("transaction_suite", NULL, NULL);
+
+    CU_add_test(s, "createTransaction", test_createTransaction);
+    CU_add_test(s, "add inputs/outputs", test_add_inputs_outputs);
+    CU_add_test(s, "serializeForSigning", test_serializeForSigning);
+    CU_add_test(s, "sign input", test_sign_input);
+    CU_add_test(s, "sign & validate input", test_sign_and_validate_input);
 
     CU_basic_run_tests();
     CU_cleanup_registry();

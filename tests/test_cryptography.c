@@ -1,6 +1,7 @@
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
 #include "utils/cryptography.h"
+#include "test_transaction.h"
 
 void test_generate_key_pair(void) {
     EVP_PKEY *key = generateKeyPair();
@@ -20,15 +21,16 @@ void test_succesful_sign_and_verify(void) {
     EVP_PKEY *key = generateKeyPair();
     CU_ASSERT_PTR_NOT_NULL(key);
 
-    const unsigned char *message = (unsigned char *)"Test message";
+    const unsigned char *message = (const unsigned char *)"Test message";
     unsigned char *signature = NULL;
     size_t siglen = 0;
 
-    int sign_result = sign(message, strlen((char *)message), key, &signature, &siglen);
+    int sign_result = sign(message, strlen((const char *)message), key, &signature, &siglen);
     CU_ASSERT_EQUAL(sign_result, 1);
     CU_ASSERT_PTR_NOT_NULL(signature);
+    CU_ASSERT(siglen > 0);
 
-    int verify_result = verify(key, message, strlen((char *)message), signature, siglen);
+    int verify_result = verify(key, message, strlen((const char *)message), signature, siglen);
     CU_ASSERT_EQUAL(verify_result, 1);
 
     OPENSSL_free(signature);

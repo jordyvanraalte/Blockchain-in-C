@@ -17,13 +17,32 @@ Transaction* createGenesisTransaction() {
     return genesisTransaction;
 }
 
-
 int createTransaction(Transaction** transaction) {
+    
+    *transaction = malloc(sizeof(Transaction));
+
+    if (!transaction) {
+        fprintf(stderr, "Memory allocation failed for Transaction\n");
+        return -1; // Error code for memory allocation failure
+    }
+
+    char uuid_str[37];
+    generateUUID(uuid_str);
+
+    strncpy((*transaction)->id, uuid_str, TX_ID_LEN);
+    (*transaction)->timestamp = time(NULL);
+    (*transaction)->inputCount = 0;
+    (*transaction)->inputs = NULL;
+    (*transaction)->outputCount = 0;
+    (*transaction)->outputs = NULL;
+    (*transaction)->signatureCount = 0;
+    (*transaction)->signatures = NULL;
+    (*transaction)->hash[0] = '\0'; // Initialize hash to empty string
+    (*transaction)->isCoinbase = false;
+    (*transaction)->next = NULL;
     
     return 0; // Success
 }
-
-
 
 int addTransactionInput(Transaction* transaction, TxInput input) {
     if (!transaction) {
@@ -65,6 +84,7 @@ int addTransactionOutput(Transaction* transaction, TxOutput output) {
     return 0; // Success
 }
 
+// TODO change to deep copy to avoid issues with memory management
 int addTransactionSignature(Transaction* transaction, Signature signature) {
     if (!transaction) {
         fprintf(stderr, "Transaction is NULL\n");
@@ -86,98 +106,88 @@ int addTransactionSignature(Transaction* transaction, Signature signature) {
 }
 
 int signInput(Signature** signature, TxInput* input, Transaction* transaction, const char* publicKey, EVP_PKEY* privateKey) {
-    if (!signature || !*signature) {
-        fprintf(stderr, "Signature is NULL\n");
-        return -1; // Error code for NULL signature
-    }
-
-    if (!transaction || !publicKey || !privateKey) {
+     if (!input || !transaction || !publicKey || !privateKey) {
         fprintf(stderr, "Invalid parameters for signing\n");
-        return -1; // Error code for invalid parameters
+        return -1;
     }
 
-    // Serialize transaction and calculate its hash
-    unsigned char* transactionData = NULL;
-    size_t transactionLength = 0;
-    if (!serializeTransaction(transaction, &transactionData, &transactionLength)) {
-        fprintf(stderr, "Failed to serialize transaction\n");
-        return -1; // Error code for serialization failure
+    if (!*signature) {
+        *signature = malloc(sizeof(Signature));
+        if (!*signature) return -1;
     }
 
-    // char hash = NULL;
-    // // Calculate SHA256 hash of the transaction data
-    // calculateSHA256(transactionData, transactionLength, &hash);
-    // free(transactionData); // Free the serialized transaction data after hashing
+    unsigned char *data = NULL;
+    size_t dataLen = 0;
+    if (!serializeForSigning(transaction, &data, &dataLen)) {
+        fprintf(stderr, "Failed to serialize transaction for signing\n");
+        return -1;
+    }
 
-    // if (!hash) {
-    //     fprintf(stderr, "Failed to calculate hash for transaction\n");
-    //     return -1; // Error code for hash calculation failure
-    // }
+    // Store signature metadata as base64-encoded SHA-256 hash of the data signed
+    char *base64hash = sha256Base64(data, dataLen); // message field = bas4e64 of sha256 of data signed
+    free(data);
+    if (!base64hash) {
+        return -1;
+    }
 
-    // size_t msglen = strlen(hash);
-    // unsigned char* sig = NULL;
-    // size_t siglen = 0;
+    // sign the base64hash
+    unsigned char *rawSig = NULL;
+    size_t rawSigLen = 0;
+    if (sign((unsigned char*)base64hash, strlen(base64hash), privateKey, &rawSig, &rawSigLen) != 1) {
+        free(base64hash);
+        return -1;
+    }
 
-    // // Sign the message
-    // int sign_result = sign((unsigned char*)hash, msglen, privateKey, &sig, &siglen);
-
-    // if (sign_result != 1) {
-    //     fprintf(stderr, "Signing failed\n");
-    //     return -1; // Error code for signing failure
-    // }
-
-    // Allocate memory for the signature
-    //(*signature)->inputId = input->id;
-    // (*signature)->message = strdup(hash);
-    // (*signature)->publicKey = strdup(publicKey);
-    // (*signature)->signature = toBase64(sig, siglen); // Convert signature to base64
-    // (*signature)->signatureLength = siglen;
-
-    // // Free the signature buffer
-    // OPENSSL_free(sig);
-    // sig = NULL; // Avoid dangling pointer
-    // if (!(*signature)->signature) {
-    //     fprintf(stderr, "Failed to convert signature to base64\n");
-    //     return -1; // Error code for base64 conversion failure
-    // }
+    strncpy((*signature)->inputId, input->id, TX_ID_LEN);
+    (*signature)->inputId[TX_ID_LEN + 1] = '\0';
+    (*signature)->message = base64hash;
+    (*signature)->publicKey = strdup(publicKey); 
+    if (!(*signature)->publicKey) {
+        free(base64hash);
+        OPENSSL_free(rawSig);
+        return -1;
+    }
+    (*signature)->signature = rawSig; // keep raw binary; caller can base64 if needed
+    (*signature)->signatureLength = rawSigLen;
 
     return 0; // Success
 }
 
-int serializeTransaction(Transaction* transaction, unsigned char** buffer, size_t* length) {
-    if (!transaction || !buffer || !length) {
-        fprintf(stderr, "Invalid parameters for serializing transaction\n");
-        return 0; // Error code for invalid parameters
+int serializeForSigning(Transaction* transaction, unsigned char** buffer, size_t* length) {
+    if (!transaction || !buffer || !length) return 0;
+
+    size_t size = 256; // Base size
+    size += transaction->inputCount * (sizeof(TxInput)); 
+    size += transaction->outputCount * (sizeof(TxOutput)); 
+
+    unsigned char* buf = malloc(size);
+    if (!buf) return 0;
+
+    size_t offset = 0;
+    offset += snprintf((char*)buf + offset, size - offset, "txid:%s;", transaction->id);
+    offset += snprintf((char*)buf + offset, size - offset, "timestamp:%ld;", transaction->timestamp);
+
+    // Serialize inputs
+    for (int i = 0; i < transaction->inputCount; i++) {
+        TxInput* input = &transaction->inputs[i];
+        offset += snprintf((char*)buf + offset, size - offset, "input%d:id:%s,address:%s,amount:%lu;", 
+                           i, input->id, input->address, input->amount);
     }
 
-    // Calculate the size needed for serialization
-    *length = sizeof(Transaction) + (transaction->inputCount * sizeof(TxInput)) +
-              (transaction->outputCount * sizeof(TxOutput)) +
-              (transaction->signatureCount * sizeof(Signature));
-
-    *buffer = malloc(*length);
-    if (!*buffer) {
-        fprintf(stderr, "Memory allocation failed for transaction serialization\n");
-        return 0; // Error code for memory allocation failure
+    // Serialize outputs
+    for (int i = 0; i < transaction->outputCount; i++) {
+        TxOutput* output = &transaction->outputs[i];
+        offset += snprintf((char*)buf + offset, size - offset, "output%d:id:%s,address:%s,amount:%lu;", 
+                           i, output->id, output->address, output->amount);
     }
 
-    // Serialize the transaction
-    memcpy(*buffer, transaction, sizeof(Transaction));
-    memcpy(*buffer + sizeof(Transaction), transaction->inputs, transaction->inputCount * sizeof(TxInput));
-    memcpy(*buffer + sizeof(Transaction) + (transaction->inputCount * sizeof(TxInput)),
-           transaction->outputs, transaction->outputCount * sizeof(TxOutput));
-    memcpy(*buffer + sizeof(Transaction) + (transaction->inputCount * sizeof(TxInput)) +
-           (transaction->outputCount * sizeof(TxOutput)),
-           transaction->signatures, transaction->signatureCount * sizeof(Signature));
-
+    *buffer = buf;
+    *length = offset;
     return 1; // Success
 }
 
 int getTotalInputAmount(Transaction* transaction) {
-    if (!transaction || transaction->inputCount <= 0) {
-        return 0;
-    }
-
+    if (!transaction || transaction->inputCount <= 0) return 0;
     int totalInput = 0;
     for (int i = 0; i < transaction->inputCount; i++) {
         totalInput += transaction->inputs[i].amount;
@@ -186,9 +196,7 @@ int getTotalInputAmount(Transaction* transaction) {
 
 }
 int getTotalOutputAmount(Transaction* transaction) {
-    if (!transaction || transaction->outputCount <= 0) {
-        return 0;
-    }
+    if (!transaction || transaction->outputCount <= 0) return 0;
 
     int totalOutput = 0;
     for (int i = 0; i < transaction->outputCount; i++) {
@@ -198,9 +206,7 @@ int getTotalOutputAmount(Transaction* transaction) {
 }
 
 bool isValidTransaction(Transaction* transaction) {
-    if (!transaction) {
-        return false;
-    }
+    if (!transaction) return false;
 
     // Check if inputs and outputs are valid
     if (transaction->inputCount < 0 || 
@@ -226,8 +232,8 @@ bool isValidTransaction(Transaction* transaction) {
 
     return true;
 }
-
 bool validateInputs(Transaction* transaction) {
+    if (!transaction) return false;
     TxInput *inputs = transaction->inputs;
 
     for (int i = 0; i < transaction->inputCount; i++) {
@@ -235,46 +241,38 @@ bool validateInputs(Transaction* transaction) {
         const char* address = inputs[i].address;
         bool found = false; 
 
-        // Check if address is valid (not NULL and not empty)
-        if (address == NULL || address[0] == '\0') {
-            return false; // Invalid address
-        }
-
-        // Check if address is valid (not NULL and not empty)
-        if (amount <= 0) {
-            return false;
-        }
+        // Check if address is valid (not NULL and not empty) and amount is positive
+        if (address == NULL || address[0] == '\0' && amount <= 0) return false; // Invalid address
 
         for(int j = 0; j < transaction->signatureCount; j++) {
             Signature* signature = &transaction->signatures[j];
-            if (signature->inputId == inputs[i].id) {
+            if (strcmp(signature->inputId, inputs[i].id) == 0) {
                 // Verify the signature
-
                 EVP_PKEY *key = NULL;
                 // Convert public key from base64 to EVP_PKEY
-                getPublicKeyFromBase64(signature->publicKey, &key);
-                if (!key) {
+                if (getPublicKeyFromBase64(signature->publicKey, &key) && !key) {
                     fprintf(stderr, "Failed to convert public key from base64\n");
                     return false; // Error in public key conversion
                 }
-
-                if (verify(key, (unsigned char*)signature->message, 
-                           strlen(signature->message), signature->signature, signature->signatureLength)) {
+                
+                int v = verify(key, (unsigned char*)signature->message, 
+                           strlen(signature->message), signature->signature, signature->signatureLength);
+                EVP_PKEY_free(key); // Free the EVP_PKEY after use
+                if (v) {
                     found = true;
                     break; // Valid signature found for this input
                 }
             }
         }
 
-        if (!found) {
-            return false; // No valid signature found for this input
-        }
+        if (!found) return false;
     }
 
     return true; // All inputs are valid
 }
-
 bool validateOutputs(Transaction* transaction) {
+    if (!transaction) return false;
+
     TxOutput *outputs = transaction->outputs;
 
     for (int i = 0; i < transaction->outputCount; i++) {
@@ -293,4 +291,25 @@ bool validateOutputs(Transaction* transaction) {
     }
 
     return true; // All outputs are valid
+}
+
+void freeTransaction(Transaction* transaction) {
+    if (transaction) {
+        if (transaction->inputs) {
+            free(transaction->inputs);
+        }
+        if (transaction->outputs) {
+            free(transaction->outputs);
+        }
+        if (transaction->signatures) {
+            for (int i = 0; i < transaction->signatureCount; i++) {
+                Signature* sig = &transaction->signatures[i];
+                if (sig->message) free(sig->message);
+                if (sig->publicKey) free(sig->publicKey);
+                if (sig->signature) OPENSSL_free(sig->signature);
+            }
+            free(transaction->signatures);
+        }
+        free(transaction);
+    }
 }
