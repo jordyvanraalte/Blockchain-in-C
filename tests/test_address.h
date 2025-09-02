@@ -3,7 +3,7 @@
 
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
-#include "data/address.h"
+#include "data/wallet/address.h"
 
 void test_create_address(void);
 
