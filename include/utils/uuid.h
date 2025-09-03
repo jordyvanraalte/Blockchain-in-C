@@ -4,10 +4,7 @@
  *  @brief Header file for UUID generation utility. 
  *  This Header file represents the interface for generating UUIDs (Universally Unique Identifiers) in C.
  */
-#include "utils/uuid.h"
+#include <stdio.h>
+#include <uuid/uuid.h>
 
-void generateUUID(char* uuid_str) {
-    uuid_t uuid;
-    uuid_generate(uuid);
-    uuid_unparse_lower(uuid, uuid_str); 
-}
+void generateUUID(char* uuid_str);
