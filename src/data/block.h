@@ -11,7 +11,8 @@
 
 
 typedef struct Block {
-    int id;
+    char id[TX_ID_LEN + 1];
+    int number;
     time_t timestamp;
     char previousHash[65];
     struct Block* previousBlock;

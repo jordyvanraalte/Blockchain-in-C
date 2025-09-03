@@ -5,14 +5,22 @@
 #include <time.h>
 #include "block.h"
 #include "transaction.h"
+#include "../utils/cryptography.h"
+
+#define MAX_MEMPOOL_SIZE 1000
+#define STANDARD_DIFFICULTY 1
+
+typedef struct Chain {
+    Block* head;
+    Block* next;
+    int length;
+} Chain;
 
 typedef struct Blockchain {
-    Block* blockchain; // Pointer to the array of blocks
-    int blockCount; 
-    Block* latestBlock;
-    Transaction* mempool; // Transactions that are not yet included in a block
+    Chain* chain;
+    Transaction mempool[MAX_MEMPOOL_SIZE]; // Transactions that are not yet included in a block
     Transaction* genesisTransaction; // The first transaction in the blockchain
-    unsigned int difficulty; 
+    unsigned int difficulty = STANDARD_DIFFICULTY; 
 } Blockchain;
 
 Blockchain* initializeBlockchain();
