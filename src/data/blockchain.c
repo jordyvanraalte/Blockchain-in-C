@@ -31,21 +31,3 @@ Blockchain* initializeBlockchain() {
 
     return blockchain;
 }
-
-Block* createGenesisBlock(Blockchain* blockchain) {
-    if (!blockchain) {
-        fprintf(stderr, "Blockchain is NULL\n");
-        return NULL;
-    }
-
-    Block* genesisBlock = malloc(sizeof(Block));
-    if (!genesisBlock) {
-        fprintf(stderr, "Memory allocation failed for Genesis Block\n");
-        return NULL;
-    }
-
-    genesisBlock->id = 0;
-    genesisBlock->timestamp = time(NULL);
-    
-    return genesisBlock; // Return the genesis block without setting hash or previousHash
-}

@@ -153,6 +153,7 @@ int signInput(Signature** signature, TxInput* input, Transaction* transaction, c
     return 0; // Success
 }
 
+// maybe change to JSON later?
 int serializeForSigning(Transaction* transaction, unsigned char** buffer, size_t* length) {
     if (!transaction || !buffer || !length) return 0;
 

@@ -201,6 +201,7 @@ int calculateSHA256(const void *data, size_t length, unsigned char out[SHA256_DI
     return 1;
 }
 
+// TODO add function for hex
 char* sha256Base64(const void *data, size_t length) {
     unsigned char digest[SHA256_DIGEST_LENGTH];
     if (!calculateSHA256(data, length, digest)) return NULL;

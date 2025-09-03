@@ -5,6 +5,7 @@
 #include "test_address.h"
 #include "test_uuid.h"
 #include "test_transaction.h"
+#include "test_block.h"
 
 int main() {
     CU_initialize_registry();
@@ -30,6 +31,15 @@ int main() {
     CU_add_test(s, "serializeForSigning", test_serializeForSigning);
     CU_add_test(s, "sign input", test_sign_input);
     CU_add_test(s, "sign & validate input", test_sign_and_validate_input);
+
+    CU_pSuite blockSuite = CU_add_suite("Block Tests", NULL, NULL);
+    CU_add_test(blockSuite, "test_create_genesis_block", test_create_genesis_block);
+    CU_add_test(blockSuite, "test_create_block", test_create_block);
+    CU_add_test(blockSuite, "test_is_valid_block", test_is_valid_block);
+    CU_add_test(blockSuite, "test_is_not_valid_block", test_is_not_valid_block);
+    CU_add_test(blockSuite, "test_is_hash_of_block_valid", test_is_hash_of_block_valid);
+    CU_add_test(blockSuite, "test_encode_block_to_json", test_encode_block_to_json);
+    CU_add_test(blockSuite, "test_decode_json_to_block", test_decode_json_to_block);
 
     CU_basic_run_tests();
     CU_cleanup_registry();
