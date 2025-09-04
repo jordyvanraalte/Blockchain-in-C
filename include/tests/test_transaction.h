@@ -3,7 +3,7 @@
 
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
-#include "../data/transaction.h"
+#include "transaction.h"
 
 void test_createTransaction(void);
 void test_sign_and_validate(void);

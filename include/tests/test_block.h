@@ -3,7 +3,7 @@
 
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
-#include "data/block.h"
+#include "block.h"
 
 void test_create_genesis_block(void);
 void test_create_block(void);
