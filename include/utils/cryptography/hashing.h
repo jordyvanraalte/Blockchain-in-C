@@ -18,5 +18,6 @@ char* sha256_base64(const void *data, size_t length);
 char* sha256_hex(const void *data, size_t length);
 int calculate_SHA256(const void *data, size_t length, unsigned char out[SHA256_DIGEST_LENGTH]);
 int calculate_RIPEMD160(const void *data, size_t length, unsigned char out[20]);
+char* RIPEMD160_hex(const void *data, size_t length);
 
 #endif // HASHING_H

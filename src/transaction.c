@@ -38,12 +38,14 @@ bool validate_inputs(Transaction* transaction) {
         bool found = false; 
 
         // Check if address is valid (not NULL and not empty) and amount is positive
-        if (address == NULL || address[0] == '\0' && amount <= 0) return false; // Invalid address
+        if (address == NULL || (address[0] == '\0' && amount <= 0)) return false; // Invalid address
 
         // todo check balance of the address.
         for(int j = 0; j < transaction->signatureCount; j++) {
             TxSignInput* signature = transaction->signatures[j];
-            if(strcmp(signature->address, address) == 0) {
+            const char* signatureAddress = signature->address;
+
+            if(strcmp(signatureAddress, address) == 0) {
                 // verify if the public key corresponds to the address
                 char* generatedAddress = generate_P2PKH_address(signature->publicKey);
                 if (!generatedAddress) {
@@ -57,10 +59,12 @@ bool validate_inputs(Transaction* transaction) {
                 }
                 free(generatedAddress);
 
+                // create new message so that we can verify the signature
+                char* message = serialize_transaction_for_signing(transaction);
 
                 // Verify the signature
-                int v = verify(signature->publicKey, (unsigned char*)signature->message, 
-                        strlen(signature->message), signature->signature, signature->signatureLength);
+                int v = verify(signature->publicKey, message, 
+                        strlen(message), signature->signature, signature->signatureLength);
                 if (v) {
                     found = true;
                     break; // Valid signature found for this input
@@ -135,7 +139,6 @@ int initialize_transaction(Transaction** transaction) {
     generate_uuid(uuid_str);
     strncpy((*transaction)->id, uuid_str, UUID_ID_LENGTH);
     (*transaction)->id[UUID_ID_LENGTH - 1] = '\0'; // Ensure null termination
-    free(uuid_str);
 
     // Initialize all fields
     memset(*transaction, 0, sizeof(Transaction)); // Set all bytes to zero
@@ -233,9 +236,8 @@ int serialize_to_json(Transaction* transaction, unsigned char** buffer, size_t* 
     if (!buf) return -1;
 
     size_t offset = 0;
-    offset += snprintf((char*)buf + offset, size - offset, "id:%s,timestamp:%ld,inputCount:%d,outputCount:%d,signatureCount:%d,isCoinbase:%d;", 
-                       transaction->id, transaction->timestamp, transaction->inputCount, transaction->outputCount, 
-                       transaction->signatureCount, transaction->isCoinbase);
+    offset += snprintf((char*)buf + offset, size - offset, "id:%s,timestamp:%ld,inputCount:%d,outputCount:%d,isCoinbase:%d;", 
+                       transaction->id, transaction->timestamp, transaction->inputCount, transaction->outputCount, transaction->isCoinbase);
 
     // Serialize inputs
     for (int i = 0; i < transaction->inputCount; i++) {
@@ -249,20 +251,6 @@ int serialize_to_json(Transaction* transaction, unsigned char** buffer, size_t* 
         TxOutput* output = transaction->outputs[i];
         offset += snprintf((char*)buf + offset, size - offset, "output%d:address:%s,amount:%u;", 
                            i, output->address, output->amount);
-    }
-
-    // Serialize signatures
-    for (int i = 0; i < transaction->signatureCount; i++) {
-        TxSignInput* signature = transaction->signatures[i];
-        // Convert signature to base64 for serialization
-        char* sigBase64 = to_base64(signature->signature, signature->signatureLength);
-        if (!sigBase64) {
-            free(buf);
-            return -1;
-        }
-        offset += snprintf((char*)buf + offset, size - offset, "signature%d:address:%s,message:%s,signature:%s;", 
-                           i, signature->address, signature->message ? signature->message : "", sigBase64);
-        free(sigBase64);
     }
 
     *buffer = buf;
@@ -289,13 +277,10 @@ int sign_input(TxSignInput** signature, TxInput* input, Transaction* transaction
     if (!signature || !input || !transaction || !keyPair) return -1;
 
     // serialize
-    unsigned char *data = NULL;
-    size_t dataLen = 0;
-    serialize_to_json(transaction, &data, &dataLen);
+    char* message = serialize_transaction_for_signing(transaction);
 
-    char* message = sha256_hex(data, dataLen); // message field = hex of sha256 of data signed
-    free(data);
     if (!message) {
+        free(message);
         return -1;
     }
 
@@ -316,9 +301,26 @@ int sign_input(TxSignInput** signature, TxInput* input, Transaction* transaction
 
     (*signature)->message = message;
     (*signature)->publicKey = keyPair;
-    strncpy((*signature)->address, input->address, ADDRESS_MAX_LEN);
+    strncpy((*signature)->address, input->address, MAX_ADDRESS_LENGTH);
     (*signature)->signature = rawSig;
     (*signature)->signatureLength = rawSigLen;
 
     return 0; // Success
+}
+
+// create function to serialize transaction for signing. do not use the serialized json directly since it contains the signatures
+char* serialize_transaction_for_signing(Transaction* transaction) {
+    if (!transaction) return NULL;
+
+    unsigned char *data = NULL;
+    size_t dataLen = 0;
+    // do not include signatures in the serialization
+    if (serialize_to_json(transaction, &data, &dataLen) != 0) {
+        fprintf(stderr, "Failed to serialize transaction for signing\n");
+        return NULL;
+    }
+
+    char* message = sha256_hex(data, dataLen); // message field = hex of sha256 of data signed
+    free(data);
+    return message; 
 }

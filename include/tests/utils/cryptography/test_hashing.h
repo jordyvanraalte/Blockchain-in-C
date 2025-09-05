@@ -7,9 +7,7 @@
 
 void test_sha256_hex(void);
 void test_sha256_base64(void);
-void test_calculate_SHA256(void);
-void test_calculate_RIPEMD160(void);
-
+void test_RIPEMD160_hex(void);
 
 
 #endif // TEST_HASHING_H

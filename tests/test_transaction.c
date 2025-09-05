@@ -1,7 +1,5 @@
 #include "tests/test_transaction.h"
 
-
-
 static void cleanup_transaction(Transaction* transaction) {
     if (!transaction) return;
 
@@ -22,9 +20,7 @@ static void cleanup_transaction(Transaction* transaction) {
                 if (sig->signature) {
                     OPENSSL_free(sig->signature);
                 }
-                if (sig->publicKey) {
-                    EVP_PKEY_free(sig->publicKey);
-                }
+                // Do NOT free sig->publicKey here; it is owned by wallet/address
                 if (sig->message) {
                     free(sig->message);
                 }
@@ -49,13 +45,13 @@ void test_is_valid_transaction(void) {
     CU_ASSERT_PTR_NOT_NULL(tx);
 
     TxInput input1;
-    strncpy(input1.address, wallet1->addresses[0]->address, ADDRESS_MAX_LEN);
+    strncpy(input1.address, wallet1->addresses[0]->address, MAX_ADDRESS_LENGTH);
     input1.amount = 50;
     int add_input_result = add_transaction_input(tx, input1);
     CU_ASSERT_EQUAL(add_input_result, 0);
 
     TxOutput output1;
-    strncpy(output1.address, wallet2->addresses[0]->address, ADDRESS_MAX_LEN);
+    strncpy(output1.address, wallet2->addresses[0]->address, MAX_ADDRESS_LENGTH);
     output1.amount = 50;    
     int add_output_result = add_transaction_output(tx, output1);
     CU_ASSERT_EQUAL(add_output_result, 0);
@@ -96,7 +92,7 @@ void test_validate_inputs(void) {
     CU_ASSERT_PTR_NOT_NULL(tx);
 
     TxInput input1;
-    strncpy(input1.address, wallet->addresses[0]->address, ADDRESS_MAX_LEN);
+    strncpy(input1.address, wallet->addresses[0]->address, MAX_ADDRESS_LENGTH);
     input1.amount = 50;
     int add_input_result = add_transaction_input(tx, input1);
     CU_ASSERT_EQUAL(add_input_result, 0);
@@ -252,7 +248,7 @@ void test_add_transaction_signature(void) {
     }
 
     TxInput input1;
-    strncpy(input1.address, wallet->addresses[0]->address, ADDRESS_MAX_LEN);
+    strncpy(input1.address, wallet->addresses[0]->address, MAX_ADDRESS_LENGTH);
     input1.amount = 50;
     int add_input_result = add_transaction_input(tx, input1);
     CU_ASSERT_EQUAL(add_input_result, 0);
@@ -291,13 +287,13 @@ void test_calculate_transaction_hash(void) {
     }
 
     TxInput input1;
-    strncpy(input1.address, wallet->addresses[0]->address, ADDRESS_MAX_LEN);
+    strncpy(input1.address, wallet->addresses[0]->address, MAX_ADDRESS_LENGTH);
     input1.amount = 50;
     int add_input_result = add_transaction_input(tx, input1);
     CU_ASSERT_EQUAL(add_input_result, 0);
 
     TxOutput output1;
-    strncpy(output1.address, wallet->addresses[0]->address, ADDRESS_MAX_LEN);
+    strncpy(output1.address, wallet->addresses[0]->address, MAX_ADDRESS_LENGTH);
     output1.amount = 50;    
     int add_output_result = add_transaction_output(tx, output1);
     CU_ASSERT_EQUAL(add_output_result, 0);
@@ -339,13 +335,13 @@ void test_serialize_to_json(void) {
     }
 
     TxInput input1;
-    strncpy(input1.address, wallet->addresses[0]->address, ADDRESS_MAX_LEN);
+    strncpy(input1.address, wallet->addresses[0]->address, MAX_ADDRESS_LENGTH);
     input1.amount = 50;
     int add_input_result = add_transaction_input(tx, input1);
     CU_ASSERT_EQUAL(add_input_result, 0);
 
     TxOutput output1;
-    strncpy(output1.address, wallet->addresses[0]->address, ADDRESS_MAX_LEN);
+    strncpy(output1.address, wallet->addresses[0]->address, MAX_ADDRESS_LENGTH);
     output1.amount = 50;    
     int add_output_result = add_transaction_output(tx, output1);
     CU_ASSERT_EQUAL(add_output_result, 0);

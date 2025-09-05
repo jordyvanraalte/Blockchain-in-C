@@ -25,5 +25,6 @@ int add_transaction_signature(Transaction* transaction, TxSignInput* signature);
 char* calculate_transaction_hash(Transaction* transaction);
 int serialize_to_json(Transaction* transaction, unsigned char** buffer, size_t* length);
 int sign_input(TxSignInput** signature, TxInput* input, Transaction* transaction, EVP_PKEY* keyPair);
+char* serialize_transaction_for_signing(Transaction* transaction);
 
 #endif // TRANSACTION_H

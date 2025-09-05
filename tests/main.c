@@ -21,8 +21,7 @@ int main() {
     CU_add_test(suite, "Test Failed Verify", test_failed_verify);
     CU_add_test(suite, "Test SHA-256 Hex", test_sha256_hex);
     CU_add_test(suite, "Test SHA-256 Base64", test_sha256_base64);
-    CU_add_test(suite, "Test Calculate SHA-256", test_calculate_SHA256);
-    CU_add_test(suite, "Test Calculate RIPEMD-160", test_calculate_RIPEMD160);
+    CU_add_test(suite, "Test Calculate RIPEMD-160 HEX", test_RIPEMD160_hex);
     CU_add_test(suite, "Test Generate P2PKH Address", test_generate_P2PKH_address);
     CU_add_test(suite, "Test UUID Generation", test_generate_uuid);
 

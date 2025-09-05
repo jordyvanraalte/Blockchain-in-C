@@ -34,6 +34,8 @@ char* generate_new_address(Wallet* wallet) {
     }
 
     strncpy(newAddress->address, addressStr, MAX_ADDRESS_LENGTH);
+    // 0 terminate
+    newAddress->address[MAX_ADDRESS_LENGTH - 1] = '\0';
     newAddress->keys = keyPair;
     newAddress->balance = 0;
 

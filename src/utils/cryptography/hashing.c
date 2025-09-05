@@ -34,3 +34,21 @@ int calculate_RIPEMD160(const void *data, size_t length, unsigned char out[20]) 
     return 1;
 }
 
+// easier to test function
+char* RIPEMD160_hex(const void *data, size_t length) {
+    unsigned char digest[20];
+    if (!calculate_RIPEMD160(data, length, digest)) return NULL;
+
+    // A RIPEMD-160 hash is 20 bytes, each byte is represented by 2 hex characters. 2 characters per byte + null terminator
+    char* hex = malloc((20 * 2) + 1);
+    if (!hex) return NULL;
+
+    // Convert each byte to its hexadecimal representation
+    for (int i = 0; i < 20; i++) {
+        sprintf(&hex[i * 2], "%02x", digest[i]);
+    }
+    hex[20 * 2] = '\0'; // Null-terminate the string
+
+    return hex;
+}
+

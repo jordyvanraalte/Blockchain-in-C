@@ -5,11 +5,16 @@ void cleanup_wallet(Wallet* wallet) {
 
     for (int i = 0; i < wallet->addressCount; i++) {
         if (wallet->addresses[i]) {
-            EVP_PKEY_free(wallet->addresses[i]->keys);
+            if (wallet->addresses[i]->keys) {
+                EVP_PKEY_free(wallet->addresses[i]->keys);
+                wallet->addresses[i]->keys = NULL;
+            }
             free(wallet->addresses[i]);
+            wallet->addresses[i] = NULL;
         }
     }
     free(wallet);
+    
 }
 
 

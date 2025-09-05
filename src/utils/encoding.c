@@ -13,7 +13,13 @@ char* to_base64(const unsigned char* input, size_t length) {
     BUF_MEM *buffer;
     BIO_get_mem_ptr(b64, &buffer);
 
-    char *b64text = strndup(buffer->data, buffer->length);
+    char *b64text = malloc(buffer->length + 1);
+    if (!b64text) {
+        BIO_free_all(b64);
+        return NULL;
+    }
+    memcpy(b64text, buffer->data, buffer->length);
+    b64text[buffer->length] = '\0';
 
     BIO_free_all(b64);
     return b64text;

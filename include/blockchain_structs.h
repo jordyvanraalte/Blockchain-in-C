@@ -3,13 +3,14 @@
 
 #include <openssl/evp.h>
 #include <time.h>
+#include "wallet.h"
 #include <stdint.h>
 #include <stdbool.h>
 
 #define UUID_ID_LENGTH 36 + 1  // UUID text length
 
 // Transaction logic
-#define ADDRESS_MAX_LEN 32 // Max length of address in sha256 hex format
+#define MAX_ADDRESS_LENGTH 37 // SAME AS MAX_ADDRESS_LENGTH in wallet_structs.h
 #define MAX_INPUTS 100
 #define MAX_OUTPUTS 100
 #define MAX_SIGNATURES 255
@@ -24,19 +25,19 @@
 #define STANDARD_DIFFICULTY 1
 
 typedef struct TxInput {
-    char address[ADDRESS_MAX_LEN]; // zero-terminated address string in hex format
+    char address[MAX_ADDRESS_LENGTH]; // zero-terminated address string in hex format
     uint32_t amount;
 } TxInput;
 
 typedef struct TxOutput {
-    char address[ADDRESS_MAX_LEN]; // zero-terminated address string in hex format
+    char address[MAX_ADDRESS_LENGTH]; // zero-terminated address string in hex format
     uint32_t amount;
 } TxOutput;
 
 typedef struct TxSignInput {
     char* message; // Message that was signed. Tihs includes metadata of the transaction.
     EVP_PKEY* publicKey; // Public key of the signer 
-    char address[ADDRESS_MAX_LEN]; // Address of the signer
+    char address[MAX_ADDRESS_LENGTH]; // Address of the signer
     uint8_t* signature; // Signature in raw binary format
     size_t signatureLength; // Length of the signature
 } TxSignInput;
