@@ -1,6 +1,7 @@
 #ifndef BLOCKCHAIN_STRUCTS_H
 #define BLOCKCHAIN_STRUCTS_H
 
+#include <openssl/evp.h>
 #include <time.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -35,7 +36,7 @@ typedef struct TxOutput {
 typedef struct TxSignInput {
     char* message; // Message that was signed. Tihs includes metadata of the transaction.
     EVP_PKEY* publicKey; // Public key of the signer 
-    char* address[ADDRESS_MAX_LEN]; // Address of the signer
+    char address[ADDRESS_MAX_LEN]; // Address of the signer
     uint8_t* signature; // Signature in raw binary format
     size_t signatureLength; // Length of the signature
 } TxSignInput;
@@ -64,14 +65,15 @@ typedef struct BlockHeader {
     time_t timestamp;
     uint64_t nonce; // Proof of work nonce
     uint64_t difficulty; // Difficulty level for mining
-    char* previousHash[HASH_LENGTH]; // Hash in hexadecimal format, 64 characters + null terminator
+    char previousHash[HASH_LENGTH]; // Hash in hexadecimal format, 64 characters + null terminator
 } BlockHeader;
 
 typedef struct Block {
     BlockHeader header;
     struct Block* previousBlock;
     Transaction* transactions[MAX_TRANSACTIONS_PER_BLOCK];
-    char* note[MAX_NOTES_LENGTH];
+    uint16_t transactionCount;
+    char note[MAX_NOTES_LENGTH];
 } Block;
 
 typedef struct Blockchain {

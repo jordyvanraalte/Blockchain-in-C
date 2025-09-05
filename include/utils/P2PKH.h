@@ -2,6 +2,9 @@
 #define P2PKH_H
 
 #include <stdlib.h>
+#include <openssl/evp.h>
+#include <openssl/x509.h>
+#include "utils/cryptography/hashing.h"
 
 #define NETWORK_VERSION_BYTE 0x01 // Version byte for mainnet
 

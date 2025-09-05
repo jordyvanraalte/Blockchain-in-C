@@ -6,7 +6,7 @@
 #include "utils/cryptography/keys.h"
 #include "utils/cryptography/hashing.h"
 #include "utils/P2PKH.h"
-#include "uuid/uuid.h"
+#include "utils/uuid.h"
 #include <stdbool.h>
 #include <openssl/evp.h>
 
@@ -19,11 +19,11 @@ int get_total_output_amount(Transaction* transaction);
 
 // transaction management
 int initialize_transaction(Transaction** transaction);
-void add_transaction_input(Transaction* transaction, TxInput input);
-void add_transaction_output(Transaction* transaction, TxOutput output);
-void add_transaction_signature(Transaction* transaction, TxSignInput signature);
+int add_transaction_input(Transaction* transaction, TxInput input);
+int add_transaction_output(Transaction* transaction, TxOutput output);
+int add_transaction_signature(Transaction* transaction, TxSignInput* signature);
 char* calculate_transaction_hash(Transaction* transaction);
 int serialize_to_json(Transaction* transaction, unsigned char** buffer, size_t* length);
-int sign_input(TxSignInput* signature, TxInput* input, Transaction* transaction, EVP_PKEY* privateKey);
+int sign_input(TxSignInput** signature, TxInput* input, Transaction* transaction, EVP_PKEY* keyPair);
 
 #endif // TRANSACTION_H

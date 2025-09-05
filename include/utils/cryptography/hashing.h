@@ -8,7 +8,9 @@
 
 #include <stdlib.h>
 #include <openssl/evp.h>
-#include "encoding.h"
+#include <openssl/sha.h>
+#include <openssl/ripemd.h>
+#include "utils/encoding.h"
 #define SHA256_DIGEST_LENGTH 32
 #define RIPEMD160_DIGEST_LENGTH 20
 

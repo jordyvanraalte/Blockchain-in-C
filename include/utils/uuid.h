@@ -7,4 +7,4 @@
 #include <stdio.h>
 #include <uuid/uuid.h>
 
-void generateUUID(char* uuid_str);
+void generate_uuid(char* uuid_str);

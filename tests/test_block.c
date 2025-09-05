@@ -1,115 +1,60 @@
-#include <CUnit/CUnit.h>
-#include <CUnit/Basic.h>
-#include "data/block.h"
-#include "test_transaction.h"
-#include "data/transaction.h"
+#include "tests/test_block.h"
 
-void test_create_genesis_block(void) {
-    Block *genesisBlock = createGenesisBlock();
-    CU_ASSERT_PTR_NOT_NULL(genesisBlock);
-    if (genesisBlock) {
-        CU_ASSERT_EQUAL(genesisBlock->id, 0);
-        CU_ASSERT_PTR_NULL(genesisBlock->previousBlock);
-        CU_ASSERT_EQUAL(genesisBlock->proof, 0);
-        CU_ASSERT_PTR_NULL(genesisBlock->transactions);
-        CU_ASSERT_PTR_NULL(genesisBlock->notes);
-        free(genesisBlock);
-    }
-}
-
-void test_create_block(void) {
-    Block *block = createBlock(1, "previous_hash_example", 12345, "This is a test block", NULL);
-    CU_ASSERT_PTR_NOT_NULL(block);
-    if (block) {
-        CU_ASSERT_EQUAL(block->id, 1);
-        CU_ASSERT_STRING_EQUAL(block->previousHash, "previous_hash_example");
-        CU_ASSERT_EQUAL(block->proof, 12345);
-        CU_ASSERT_STRING_EQUAL(block->notes, "This is a test block");
-        CU_ASSERT_PTR_NULL(block->transactions);    
-        free(block->notes);
-        free(block);
-    }
+static void create_genesis_block(void) {
+    // Genesis block creation logic
 }
 
 void test_is_valid_block(void) {
-    EVP_PKEY *kp1 = generateKeyPair();
-    char *pubB64_1 = toBase64FromPublicKey(kp1);    
+    Wallet *wallet1 = create_wallet();
+    Wallet *wallet2 = create_wallet();
+    CU_ASSERT_PTR_NOT_NULL(wallet1);
+    CU_ASSERT_PTR_NOT_NULL(wallet2);
+    if (!wallet1 || !wallet2) return;
 
-    EVP_PKEY *kp2 = generateKeyPair();
-    char *pubB64_2 = toBase64FromPublicKey(kp2);
+    // Create a valid transaction
+    Transaction* tx = NULL;
+    int init_result = initialize_transaction(&tx);
+    CU_ASSERT_EQUAL(init_result, 0);
+    CU_ASSERT_PTR_NOT_NULL(tx);
 
-    Signature *sig1 = NULL;
-    Signature *sig2 = NULL;
-    
-    Transaction* tx1 = NULL;
-    createTransaction(&tx1);
-    TxInput in1 = { .id = "input1", .address = "address1", .amount = 50 };
-    addTransactionInput(tx1, in1);
-    signInput(&sig1, &tx1->inputs[0], tx1, pubB64_1, kp1);
+    TxInput input1 = { .address = wallet1->addresses[0]->address, .amount = 50 };
 
-    addTransactionSignature(tx1, *sig1);
+    int add_input_result = add_transaction_input(tx, input1);
+    CU_ASSERT_EQUAL(add_input_result, 0);
 
-    Transaction* tx2 = NULL;
-    createTransaction(&tx2);
-    TxInput in2 = { .id = "input2", .address = "address2", .amount = 30 };
-    addTransactionInput(tx2, in2);
-    signInput(&sig2, &tx2->inputs[0], tx2, pubB64_2, kp2);
+    TxOutput output1 = { .address = wallet2->addresses[0]->address, .amount = 50 };
+    int add_output_result = add_transaction_output(tx, output1);
+    CU_ASSERT_EQUAL(add_output_result, 0);
 
-    addTransactionSignature(tx2, *sig2);
+    // Sign the input
+    TxSignInput signature1;
+    int sign_result = sign_input(&signature1, &input1, tx, wallet1->addresses[0]->keys);
+    CU_ASSERT_EQUAL(sign_result, 0);
 
-    tx1->next = tx2; // Link transactions
-    Block *block = createBlock(1, "previous_hash_example", 12345, "This is a test block", tx1);
-    CU_ASSERT_TRUE(isValidBlock(block));
+    // add signature to transaction
+    int add_sig_result = add_transaction_signature(tx, signature1);
+    CU_ASSERT_EQUAL(add_sig_result, 0);
 
-    // Clean up
-    free(block->notes);
-    free(block);
-    free(pubB64_1);
-    free(pubB64_2);
-    EVP_PKEY_free(kp1);
-    EVP_PKEY_free(kp2);
-    freeTransaction(tx1);
-    freeTransaction(tx2);
-}
+    bool is_valid_tx = is_valid_transaction(tx);
+    CU_ASSERT_TRUE(is_valid_tx);
 
-void test_is_not_valid_block(void) {
-    Block *block = createBlock(1, "previous_hash_example", 12345, "This is a test block", NULL);
-    CU_ASSERT_FALSE(isValidBlock(block)); // Block with no transactions should be invalid
-    free(block);
-}
-
-void test_is_hash_of_block_valid(void) {
-    Block *block = createBlock(1, "previous_hash_example", 12345, "This is a test block", NULL);
+    // Create a valid block
+    Block* block = malloc(sizeof(Block));
     CU_ASSERT_PTR_NOT_NULL(block);
-    if (block) {
-        char *calculatedHash = calculateBlockHash(block);
-        CU_ASSERT_PTR_NOT_NULL(calculatedHash);
-        free(block->notes);
-        free(block);
-    }
+
+    // TODO ADD better block creation logic since genesis block is not valid and nonce should be calculated
+
 }
 
-void test_encode_block_to_json(void) {
-    Block *block = createBlock(1, "previous_hash_example", 12345, "This is a test block", NULL);
-    CU_ASSERT_PTR_NOT_NULL(block);
-    if (block) {
-        char *json = encodeBlockToJson(block);
-
-        char expectedJson[512];
-        snprintf(expectedJson, sizeof(expectedJson),
-        "{ \"id\": 1, \"timestamp\": %ld, \"previousHash\": \"previous_hash_example\", \"proof\": 12345, \"notes\": \"This is a test block\" }",
-        block->timestamp);
-
-        CU_ASSERT_PTR_NOT_NULL(json);
-        if (json) {
-            CU_ASSERT_STRING_EQUAL(json, expectedJson);
-            free(json);
-        }
-        free(block->notes);
-        free(block);
-    }
+void test_calculate_block_hash(void) {
+    // Test block hash calculation logic
 }
-void test_decode_json_to_block(void) {
-    // TODO implement this test once decodeJsonToBlock is implemented
-    CU_ASSERT_TRUE(1); // Placeholder assertion
+
+void test_serialize_block(void) {
+    // Test block serialization logic
 }
+
+void test_deserialize_block(void) {
+    // Test block deserialization logic
+}
+

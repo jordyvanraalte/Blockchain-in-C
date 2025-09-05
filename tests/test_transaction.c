@@ -1,154 +1,352 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <CUnit/Basic.h>
+#include "test_transaction.h"
 
-#include "../src/data/transaction.h"
-#include "../src/utils/cryptography.h"
-#include "../src/utils/uuid.h"
+static void cleanup_transaction(Transaction* transaction) {
+    if (!transaction) return;
 
-// Helper to make a TxInput
-static TxInput make_input(const char *id, const char *addr, uint64_t amt) {
-    TxInput in;
-    memset(&in, 0, sizeof(in));
-    strncpy(in.id, id, TX_ID_LEN);
-    strncpy(in.address, addr, sizeof(in.address)-1);
-    in.amount = amt;
-    return in;
+    for (int i = 0; i < transaction->inputCount; i++) {
+        free(transaction->inputs[i]);
+    }
+    for (int i = 0; i < transaction->outputCount; i++) {
+        free(transaction->outputs[i]);
+    }
+    for (int i = 0; i < transaction->signatureCount; i++) {
+        TxSignInput* sig = transaction->signatures[i];
+        if (sig) {
+            free(sig->message);
+
+void test_is_valid_transaction(void) {
+    // TODO ADD BALANCE CHECK
+    Wallet *wallet1 = create_wallet();
+    Wallet *wallet2 = create_wallet();
+    CU_ASSERT_PTR_NOT_NULL(wallet1);
+    CU_ASSERT_PTR_NOT_NULL(wallet2);
+    if (!wallet1 || !wallet2) return;
+            free(sig->signature);
+            EVP_PKEY_free(sig->publicKey);
+            free(sig);
+        }
+    }
+    free(transaction);
 }
 
-// Helper to make a TxOutput
-static TxOutput make_output(const char *id, const char *addr, uint64_t amt) {
-    TxOutput o;
-    memset(&o, 0, sizeof(o));
-    strncpy(o.id, id, TX_ID_LEN);
-    strncpy(o.address, addr, sizeof(o.address)-1);
-    o.amount = amt;
-    return o;
+void test_is_valid_transaction(void) {
+    // TODO ADD BALANCE CHECK
+    Wallet *wallet1 = create_wallet();
+    Wallet *wallet2 = create_wallet();
+    CU_ASSERT_PTR_NOT_NULL(wallet1);
+    CU_ASSERT_PTR_NOT_NULL(wallet2);
+    if (!wallet1 || !wallet2) return;
+
+    // Create a valid transaction
+    Transaction* tx = NULL;
+    int init_result = initialize_transaction(&tx);
+    CU_ASSERT_EQUAL(init_result, 0);
+    CU_ASSERT_PTR_NOT_NULL(tx);
+
+    TxInput input1 = { .address = wallet1->addresses[0]->address, .amount = 50 };
+
+    int add_input_result = add_transaction_input(tx, input1);
+    CU_ASSERT_EQUAL(add_input_result, 0);
+
+    TxOutput output1 = { .address = wallet2->addresses[0]->address, .amount = 50 };
+    int add_output_result = add_transaction_output(tx, output1);
+    CU_ASSERT_EQUAL(add_output_result, 0);
+
+    // Sign the input
+    TxSignInput signature1;
+    int sign_result = sign_input(&signature1, &input1, tx, wallet1->addresses[0]->keys);
+    CU_ASSERT_EQUAL(sign_result, 0);
+
+    // add signature to transaction
+    int add_sig_result = add_transaction_signature(tx, signature1);
+    CU_ASSERT_EQUAL(add_sig_result, 0);
+
+    bool is_valid = is_valid_transaction(tx);
+    CU_ASSERT_TRUE(is_valid);
+
+    // Modify the transaction to make it invalid (e.g., change output amount)
+    tx->outputs[0]->amount = 100; // Change output amount to an invalid
+    is_valid = is_valid_transaction(tx);
+    CU_ASSERT_FALSE(is_valid);
+
+    // Clean up
+    cleanup_transaction(tx);
+    cleanup_wallet(wallet1);
+    cleanup_wallet(wallet2);
 }
 
-void test_createTransaction(void) {
-    Transaction *tx = NULL;
-    int rc = createTransaction(&tx);   
-    CU_ASSERT(rc == 0);
+void test_validate_inputs(void) {
+    Wallet *wallet = create_wallet();
+    CU_ASSERT_PTR_NOT_NULL(wallet);
+    if (!wallet) return;
+
+    // Create a transaction with valid input
+    Transaction* tx = NULL;
+    int init_result = initialize_transaction(&tx);
+    CU_ASSERT_EQUAL(init_result, 0);
+    CU_ASSERT_PTR_NOT_NULL(tx);
+
+    TxInput input1 = { .address = wallet->addresses[0]->address, .amount = 50 };
+    int add_input_result = add_transaction_input(tx, input1);
+    CU_ASSERT_EQUAL(add_input_result, 0);
+
+    // Sign the input
+    TxSignInput signature1;
+    int sign_result = sign_input(&signature1, &input1, tx, wallet->addresses[0]->keys);
+    CU_ASSERT_EQUAL(sign_result, 0);
+
+    // add signature to transaction
+    int add_sig_result = add_transaction_signature(tx, signature1);
+    CU_ASSERT_EQUAL(add_sig_result, 0);
+
+    bool inputs_valid = validate_inputs(tx);
+    CU_ASSERT_TRUE(inputs_valid);
+
+    // Modify the input to make it invalid (e.g., change address)
+    strcpy(tx->inputs[0]->address, "invalid_address");
+    inputs_valid = validate_inputs(tx);
+    CU_ASSERT_FALSE(inputs_valid);
+
+    // Clean up
+    cleanup_transaction(tx);
+    cleanup_wallet(wallet);
+}
+
+void test_validate_outputs(void) {
+    // Create a transaction with valid output
+    Transaction* tx = NULL;
+    int init_result = initialize_transaction(&tx);
+    CU_ASSERT_EQUAL(init_result, 0);
+    CU_ASSERT_PTR_NOT_NULL(tx);
+
+    TxOutput output1 = { .address = "valid_address_1", .amount = 50 };
+    int add_output_result = add_transaction_output(tx, output1);
+    CU_ASSERT_EQUAL(add_output_result, 0);
+
+    bool outputs_valid = validate_outputs(tx);
+    CU_ASSERT_TRUE(outputs_valid);
+
+    // Modify the output to make it invalid (e.g., set amount to zero)
+    tx->outputs[0]->amount = 0;
+    outputs_valid = validate_outputs(tx);
+    CU_ASSERT_FALSE(outputs_valid);
+
+    // Clean up
+    cleanup_transaction(tx);
+}
+
+void test_get_total_input_amount(void) {
+    // Create a transaction with multiple inputs
+    Transaction* tx = NULL;
+    int init_result = initialize_transaction(&tx);
+    CU_ASSERT_EQUAL(init_result, 0);
+    CU_ASSERT_PTR_NOT_NULL(tx);
+
+    TxInput input1 = { .address = "address_1", .amount = 50 };
+    TxInput input2 = { .address = "address_2", .amount = 30 };
+    add_transaction_input(tx, input1);
+    add_transaction_input(tx, input2);
+
+    int total_input = get_total_input_amount(tx);
+    CU_ASSERT_EQUAL(total_input, 80); // 50 + 30
+
+    // Clean up
+    cleanup_transaction(tx);
+}
+
+void test_get_total_output_amount(void) {
+    // Create a transaction with multiple outputs
+    Transaction* tx = NULL;
+    int init_result = initialize_transaction(&tx);
+    CU_ASSERT_EQUAL(init_result, 0);
+    CU_ASSERT_PTR_NOT_NULL(tx);
+
+    TxOutput output1 = { .address = "address_1", .amount = 40 };
+    TxOutput output2 = { .address = "address_2", .amount = 20 };
+    add_transaction_output(tx, output1);
+    add_transaction_output(tx, output2);
+
+    int total_output = get_total_output_amount(tx);
+    CU_ASSERT_EQUAL(total_output, 60); // 40 + 20
+
+    // Clean up
+    cleanup_transaction(tx);
+}
+
+void test_initialize_transaction(void) {
+    Transaction* tx = NULL;
+    int result = initialize_transaction(&tx);
+    CU_ASSERT_EQUAL(result, 0);
     CU_ASSERT_PTR_NOT_NULL(tx);
     if (tx) {
-        CU_ASSERT_PTR_NOT_NULL(tx->id); 
-        CU_ASSERT(tx->inputCount == 0);
-        CU_ASSERT(tx->outputCount == 0);
-        CU_ASSERT(tx->signatureCount == 0);
-        freeTransaction(tx);
+        CU_ASSERT_EQUAL(tx->inputCount, 0);
+        CU_ASSERT_EQUAL(tx->outputCount, 0);
+        CU_ASSERT_EQUAL(tx->signatureCount, 0);
+        CU_ASSERT_TRUE(tx->isCoinbase == false);
+        CU_ASSERT_PTR_NULL(tx->inputs[0]);
+        CU_ASSERT_PTR_NULL(tx->outputs[0]);
+        CU_ASSERT_PTR_NULL(tx->signatures[0]);
+        cleanup_transaction(tx);
     }
 }
 
 void test_add_inputs_outputs(void) {
-    Transaction *tx = NULL;
-    (void)createTransaction(&tx);
-    CU_ASSERT_PTR_NOT_NULL_FATAL(tx);
+    Transaction* tx = NULL;
+    int init_result = initialize_transaction(&tx);
+    CU_ASSERT_EQUAL(init_result, 0);
+    CU_ASSERT_PTR_NOT_NULL(tx);
+    if (!tx) return;
 
-    TxInput in1 = make_input("11111111-1111-1111-1111-111111111111", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", 50);
-    TxInput in2 = make_input("22222222-2222-2222-2222-222222222222", "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB", 25);
-    CU_ASSERT(addTransactionInput(tx, in1) == 0);
-    CU_ASSERT(addTransactionInput(tx, in2) == 0);
-    CU_ASSERT(tx->inputCount == 2);
+    TxInput input1 = { .address = "address_1", .amount = 50 };
+    TxInput input2 = { .address = "address_2", .amount = 30 };
+    int add_input_result1 = add_transaction_input(tx, input1);
+    int add_input_result2 = add_transaction_input(tx, input2);
+    CU_ASSERT_EQUAL(add_input_result1, 0);
+    CU_ASSERT_EQUAL(add_input_result2, 0);
+    CU_ASSERT_EQUAL(tx->inputCount, 2);
+    CU_ASSERT_STRING_EQUAL(tx->inputs[0]->address, "address_1");
+    CU_ASSERT_EQUAL(tx->inputs[0]->amount, 50);
+    CU_ASSERT_STRING_EQUAL(tx->inputs[1]->address, "address_2");
+    CU_ASSERT_EQUAL(tx->inputs[1]->amount, 30);
 
-    TxOutput out1 = make_output("33333333-3333-3333-3333-333333333333", "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC", 60);
-    CU_ASSERT(addTransactionOutput(tx, out1) == 0);
-    CU_ASSERT(tx->outputCount == 1);
+    TxOutput output1 = { .address = "address_3", .amount = 40 };
+    TxOutput output2 = { .address = "address_4", .amount = 20 };
+    int add_output_result1 = add_transaction_output(tx, output1);
+    int add_output_result2 = add_transaction_output(tx, output2);
+    CU_ASSERT_EQUAL(add_output_result1, 0);
+    CU_ASSERT_EQUAL(add_output_result2, 0);
+    CU_ASSERT_EQUAL(tx->outputCount, 2);
+    CU_ASSERT_STRING_EQUAL(tx->outputs[0]->address, "address_3");
+    CU_ASSERT_EQUAL(tx->outputs[0]->amount, 40);
+    CU_ASSERT_STRING_EQUAL(tx->outputs[1]->address, "address_4");
+    CU_ASSERT_EQUAL(tx->outputs[1]->amount, 20);
 
-    CU_ASSERT(getTotalInputAmount(tx) == 75);
-    CU_ASSERT(getTotalOutputAmount(tx) == 60);
-
-    freeTransaction(tx);
+    // Clean up
+    cleanup_transaction(tx);
 }
 
-void test_serializeForSigning(void) {
-    Transaction *tx = NULL;
-    (void)createTransaction(&tx);
-    CU_ASSERT_PTR_NOT_NULL_FATAL(tx);
+void test_add_transaction_signature(void) {
+    Wallet *wallet = create_wallet();
+    CU_ASSERT_PTR_NOT_NULL(wallet);
+    if (!wallet) return;
 
-    TxInput in = make_input("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD", 10);
-    TxOutput out = make_output("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", "EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE", 10);
-    CU_ASSERT(addTransactionInput(tx, in) == 0);
-    CU_ASSERT(addTransactionOutput(tx, out) == 0);
-
-    unsigned char *buf1 = NULL, *buf2 = NULL;
-    size_t len1 = 0, len2 = 0;
-    CU_ASSERT(serializeForSigning(tx, &buf1, &len1) == 1);
-    CU_ASSERT(serializeForSigning(tx, &buf2, &len2) == 1);
-    CU_ASSERT(len1 == len2);
-    CU_ASSERT(len1 > 0);
-    if (buf1 && buf2 && len1 == len2)
-        CU_ASSERT(memcmp(buf1, buf2, len1) == 0);
-
-    free(buf1);
-    free(buf2);
-    freeTransaction(tx);
-}
-
-void test_sign_input(void) {
-    Transaction *tx = NULL;
-    (void)createTransaction(&tx);
-    CU_ASSERT_PTR_NOT_NULL_FATAL(tx);
-
-    EVP_PKEY *kp = generateKeyPair();
-    CU_ASSERT_PTR_NOT_NULL_FATAL(kp);
-
-    char *pubB64 = toBase64FromPublicKey(kp);
-    CU_ASSERT_PTR_NOT_NULL_FATAL(pubB64);
-
-    TxInput in = make_input("99999999-9999-9999-9999-999999999999","FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",40);
-    TxOutput out = make_output("88888888-8888-8888-8888-888888888888","FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",40);
-    CU_ASSERT(addTransactionInput(tx, in) == 0);
-    CU_ASSERT(addTransactionOutput(tx, out) == 0);
-
-    Signature *sig = NULL;
-    CU_ASSERT(signInput(&sig, &tx->inputs[0], tx, pubB64, kp) == 0);
-    CU_ASSERT_PTR_NOT_NULL(sig);
-    if (sig) {
-        CU_ASSERT_STRING_EQUAL(sig->inputId, in.id);
-        CU_ASSERT_PTR_NOT_NULL(sig->message);
-        CU_ASSERT_PTR_NOT_NULL(sig->publicKey);
-        CU_ASSERT_STRING_EQUAL(sig->publicKey, pubB64);
-        CU_ASSERT_PTR_NOT_NULL(sig->signature);
-        CU_ASSERT(sig->signatureLength > 0);
-        free(sig->message);
-        free(sig->publicKey);
-        free(sig->signature);
-        free(sig);
+    Transaction* tx = NULL;
+    int init_result = initialize_transaction(&tx);
+    CU_ASSERT_EQUAL(init_result, 0);
+    CU_ASSERT_PTR_NOT_NULL(tx);
+    if (!tx) {
+        cleanup_wallet(wallet);
+        return;
     }
 
-    free(pubB64);
-    EVP_PKEY_free(kp);
-    freeTransaction(tx);
+    TxInput input1 = { .address = wallet->addresses[0]->address, .amount = 50 };
+    int add_input_result = add_transaction_input(tx, input1);
+    CU_ASSERT_EQUAL(add_input_result, 0);
+
+    // Sign the input
+    TxSignInput signature1;
+    int sign_result = sign_input(&signature1, &input1, tx, wallet->addresses[0]->keys);
+    CU_ASSERT_EQUAL(sign_result, 0);
+
+    // add signature to transaction
+    int add_sig_result = add_transaction_signature(tx, signature1);
+    CU_ASSERT_EQUAL(add_sig_result, 0);
+    CU_ASSERT_EQUAL(tx->signatureCount, 1);
+    CU_ASSERT_STRING_EQUAL(tx->signatures[0]->address, wallet->addresses[0]->address);
+    CU_ASSERT_EQUAL(tx->signatures[0]->signatureLength, signature1.signatureLength);
+    CU_ASSERT_PTR_NOT_NULL(tx->signatures[0]->signature);
+
+    // Clean up
+    cleanup_transaction(tx);
+    cleanup_wallet(wallet);
 }
 
-void test_sign_and_validate_input(void) {
-    Transaction *tx = NULL;
-    (void)createTransaction(&tx);
-    CU_ASSERT_PTR_NOT_NULL_FATAL(tx);
+void test_calculate_transaction_hash(void) {
+    Wallet *wallet = create_wallet();
+    CU_ASSERT_PTR_NOT_NULL(wallet);
+    if (!wallet) return;
 
-    EVP_PKEY *kp = generateKeyPair();
-    CU_ASSERT_PTR_NOT_NULL_FATAL(kp);
-
-    char *pubB64 = toBase64FromPublicKey(kp);
-    CU_ASSERT_PTR_NOT_NULL_FATAL(pubB64);
-
-    TxInput in = make_input("99999999-9999-9999-9999-999999999999","FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",40);
-    TxOutput out = make_output("88888888-8888-8888-8888-888888888888","FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",40);
-    CU_ASSERT(addTransactionInput(tx, in) == 0);
-    CU_ASSERT(addTransactionOutput(tx, out) == 0);
-
-    Signature *sig = NULL;
-    CU_ASSERT(signInput(&sig, &tx->inputs[0], tx, pubB64, kp) == 0);
-    CU_ASSERT_PTR_NOT_NULL(sig);
-    if (sig) {
-        CU_ASSERT(addTransactionSignature(tx, *sig) == 0);
-        bool ok = validateInputs(tx); 
-        CU_ASSERT(ok == true);
+    Transaction* tx = NULL;
+    int init_result = initialize_transaction(&tx);
+    CU_ASSERT_EQUAL(init_result, 0);
+    CU_ASSERT_PTR_NOT_NULL(tx);
+    if (!tx) {
+        cleanup_wallet(wallet);
+        return;
     }
 
-    free(pubB64);
-    EVP_PKEY_free(kp);
-    freeTransaction(tx);
+    TxInput input1 = { .address = wallet->addresses[0]->address, .amount = 50 };
+    int add_input_result = add_transaction_input(tx, input1);
+    CU_ASSERT_EQUAL(add_input_result, 0);
+
+    TxOutput output1 = { .address = "address_2", .amount = 50 };
+    int add_output_result = add_transaction_output(tx, output1);
+    CU_ASSERT_EQUAL(add_output_result, 0);
+
+    char* hash1 = calculate_transaction_hash(tx);
+    CU_ASSERT_PTR_NOT_NULL(hash1);
+
+    // Calculate hash again and ensure it is the same
+    char* hash2 = calculate_transaction_hash(tx);
+    CU_ASSERT_PTR_NOT_NULL(hash2);
+    CU_ASSERT_STRING_EQUAL(hash1, hash2);
+
+    // Modify the transaction and ensure the hash changes
+    tx->outputs[0]->amount = 100;
+    char* hash3 = calculate_transaction_hash(tx);
+    CU_ASSERT_PTR_NOT_NULL(hash3);
+    CU_ASSERT_STRING_NOT_EQUAL(hash1, hash3);
+
+    // Clean up
+    free(hash1);
+    free(hash2);
+    free(hash3);
+    cleanup_transaction(tx);
+    cleanup_wallet(wallet);
+}
+
+void test_serialize_to_json(void) {
+    Wallet *wallet = create_wallet();
+    CU_ASSERT_PTR_NOT_NULL(wallet);
+    if (!wallet) return;
+
+    Transaction* tx = NULL;
+    int init_result = initialize_transaction(&tx);
+    CU_ASSERT_EQUAL(init_result, 0);
+    CU_ASSERT_PTR_NOT_NULL(tx);
+    if (!tx) {
+        cleanup_wallet(wallet);
+        return;
+    }
+
+    TxInput input1 = { .address = wallet->addresses[0]->address, .amount = 50 };
+    int add_input_result = add_transaction_input(tx, input1);
+    CU_ASSERT_EQUAL(add_input_result, 0);
+
+    TxOutput output1 = { .address = "address_2", .amount = 50 };
+    int add_output_result = add_transaction_output(tx, output1);
+    CU_ASSERT_EQUAL(add_output_result, 0);
+
+    // Sign the input
+    TxSignInput signature1;
+    int sign_result = sign_input(&signature1, &input1, tx, wallet->addresses[0]->keys);
+    CU_ASSERT_EQUAL(sign_result, 0);
+
+    // add signature to transaction
+    int add_sig_result = add_transaction_signature(tx, signature1);
+    CU_ASSERT_EQUAL(add_sig_result, 0);
+
+    unsigned char* buffer = NULL;
+    size_t length = 0;
+    int serialize_result = serialize_to_json(tx, &buffer, &length);
+    CU_ASSERT_EQUAL(serialize_result, 0);
+    CU_ASSERT_PTR_NOT_NULL(buffer);
+    CU_ASSERT(length > 0);
+
+    printf("Serialized Transaction JSON: %.*s\n", (int)length, buffer);
+
+    // Clean up
+    free(buffer);
+    cleanup_transaction(tx);
+    cleanup_wallet(wallet);
 }

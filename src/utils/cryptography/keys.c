@@ -1,4 +1,4 @@
-#include "keys.h"
+#include "utils/cryptography/keys.h"
 
 /*
 https://linux.die.net/man/3/evp_pkey_keygen
@@ -57,10 +57,10 @@ void save_private_key_to_pem(EVP_PKEY* pkey, const char* filename) {
     }
 
     fclose(fp);
-    return 0;
+    return;
 }
 
-int save_public_key_to_pem(EVP_PKEY* pkey, const char* filename) {
+void save_public_key_to_pem(EVP_PKEY* pkey, const char* filename) {
     if (!pkey || !filename) {
         fprintf(stderr, "Invalid parameters to save_public_key_to_pem\n");
         return;
@@ -78,7 +78,7 @@ int save_public_key_to_pem(EVP_PKEY* pkey, const char* filename) {
     }
 
     fclose(fp);
-    return 0;
+    return;
 }
 
 EVP_PKEY* load_private_key_from_pem(const char* filename) {

@@ -11,6 +11,7 @@ TARGET_EXEC := blockchain
 BUILD_DIR := build
 SRC_DIRS := src
 TEST_DIR := tests
+INC_DIR := include
 TARGET_TESTS := $(BUILD_DIR)/tests/test_runner
 
 # Source files (both C and C++)
@@ -18,7 +19,6 @@ SRCS := $(shell find $(SRC_DIRS) -name '*.c')
 TEST_FILES := $(shell find $(TEST_DIR) -name '*.c')
 
 # Object files under build/
-# Remove leading ./ from SRC paths for cleaner build paths
 SRCS_NO_DOT := $(patsubst ./%,%,$(SRCS))
 SRC_OBJS := $(SRCS_NO_DOT:%=$(BUILD_DIR)/%.o)
 TEST_OBJS := $(TEST_FILES:%=$(BUILD_DIR)/%.o)
@@ -26,11 +26,11 @@ TEST_OBJS := $(TEST_FILES:%=$(BUILD_DIR)/%.o)
 # Dependency files for automatic make dependency tracking
 DEPS := $(SRC_OBJS:.o=.d)
 
-# Include directories for header search
-INC_DIRS := $(shell find $(SRC_DIRS) -type d) $(shell find $(TEST_DIR) -type d)
+# Include directories for header search (added include/)
+INC_DIRS := $(shell find $(SRC_DIRS) -type d) $(shell find $(TEST_DIR) -type d) $(INC_DIR)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
-all: $(TARGET_APP) $(TARGET_TESTS)
+all: $(BUILD_DIR)/$(TARGET_EXEC) $(TARGET_TESTS)
 
 # Final executable build step
 $(BUILD_DIR)/$(TARGET_EXEC): $(SRC_OBJS)

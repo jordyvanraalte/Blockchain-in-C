@@ -48,6 +48,8 @@ void add_block(Blockchain* blockchain, Block* block, Transaction* transactions, 
         txIndex++;
     }
 
+    block->transactionCount = txIndex; // Set the actual number of transactions added
+
     // Add notes if provided
     if (notes) {
         strncpy(block->note, notes, MAX_NOTES_LENGTH);

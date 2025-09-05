@@ -2,7 +2,9 @@
 #define ENCODING_H
 
 #include <stdlib.h>
+#include <string.h>
 #include <openssl/bio.h>
+#include <openssl/evp.h>
 #include <openssl/buffer.h>
 
 char* to_base64(const unsigned char* input, size_t length);

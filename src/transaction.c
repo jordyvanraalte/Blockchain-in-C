@@ -6,21 +6,21 @@ bool is_valid_transaction(Transaction* transaction) {
     // Check if inputs and outputs are valid
     if (transaction->inputCount < 0 || 
         transaction->outputCount < 0 ||
-        getTotalInputAmount(transaction) < 0 ||
-        getTotalOutputAmount(transaction) < 0
+        get_total_input_amount(transaction) < 0 ||
+        get_total_output_amount(transaction) < 0
     ) 
     {
         return false;
     }
 
     // Validate inputs and signatures
-    if (!validateInputs(transaction)) {
+    if (!validate_inputs(transaction)) {
         fprintf(stderr, "Invalid inputs in transaction %d\n", transaction->id);
         return false;
     }
 
     // Validate outputs
-    if (!validateOutputs(transaction)) {
+    if (!validate_outputs(transaction)) {
         fprintf(stderr, "Invalid outputs in transaction %d\n", transaction->id);
         return false;
     }
@@ -30,18 +30,19 @@ bool is_valid_transaction(Transaction* transaction) {
 
 bool validate_inputs(Transaction* transaction) {
     if (!transaction) return false;
-    TxInput *inputs = transaction->inputs;
+    TxInput **inputs = transaction->inputs;
 
     for (int i = 0; i < transaction->inputCount; i++) {
-        const int amount = inputs[i].amount;
-        const char* address = inputs[i].address;
+        const int amount = inputs[i]->amount;
+        const char* address = inputs[i]->address;
         bool found = false; 
 
         // Check if address is valid (not NULL and not empty) and amount is positive
         if (address == NULL || address[0] == '\0' && amount <= 0) return false; // Invalid address
 
+        // todo check balance of the address.
         for(int j = 0; j < transaction->signatureCount; j++) {
-            TxSignInput* signature = &transaction->signatures[j];
+            TxSignInput* signature = transaction->signatures[j];
             if(strcmp(signature->address, address) == 0) {
                 // verify if the public key corresponds to the address
                 char* generatedAddress = generate_P2PKH_address(signature->publicKey);
@@ -77,11 +78,11 @@ bool validate_inputs(Transaction* transaction) {
 bool validate_outputs(Transaction* transaction) {
     if (!transaction) return false;
 
-    TxOutput *outputs = transaction->outputs;
+    TxOutput **outputs = transaction->outputs;
 
     for (int i = 0; i < transaction->outputCount; i++) {
-        const int amount = outputs[i].amount;
-        const char* address = outputs[i].address;
+        const int amount = outputs[i]->amount;
+        const char* address = outputs[i]->address;
 
         // Check if address is valid (not NULL and not empty)
         if (address == NULL || address[0] == '\0') {
@@ -131,7 +132,7 @@ int initialize_transaction(Transaction** transaction) {
 
     //set uuid
     char uuid_str[UUID_ID_LENGTH];
-    generateUUID(uuid_str);
+    generate_uuid(uuid_str);
     strncpy((*transaction)->id, uuid_str, UUID_ID_LENGTH);
     (*transaction)->id[UUID_ID_LENGTH - 1] = '\0'; // Ensure null termination
     free(uuid_str);
@@ -238,21 +239,21 @@ int serialize_to_json(Transaction* transaction, unsigned char** buffer, size_t* 
 
     // Serialize inputs
     for (int i = 0; i < transaction->inputCount; i++) {
-        TxInput* input = &transaction->inputs[i];
+        TxInput* input = transaction->inputs[i];
         offset += snprintf((char*)buf + offset, size - offset, "input%d:address:%s,amount:%u;", 
                            i, input->address, input->amount);
     }
 
     // Serialize outputs
     for (int i = 0; i < transaction->outputCount; i++) {
-        TxOutput* output = &transaction->outputs[i];
+        TxOutput* output = transaction->outputs[i];
         offset += snprintf((char*)buf + offset, size - offset, "output%d:address:%s,amount:%u;", 
                            i, output->address, output->amount);
     }
 
     // Serialize signatures
     for (int i = 0; i < transaction->signatureCount; i++) {
-        TxSignInput* signature = &transaction->signatures[i];
+        TxSignInput* signature = transaction->signatures[i];
         // Convert signature to base64 for serialization
         char* sigBase64 = to_base64(signature->signature, signature->signatureLength);
         if (!sigBase64) {

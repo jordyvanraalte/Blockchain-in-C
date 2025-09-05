@@ -2,11 +2,6 @@
 #include "transaction.h"
 #include <stdio.h>
 
-
-Block* create_block(const char* previousHash, uint64_t proof, const char* notes, Transaction* transactions) {
-
-}
-
 bool is_valid_block(Block* block) {
     if (!block) return false;
 
@@ -22,13 +17,14 @@ bool is_valid_block(Block* block) {
         return false;
     }
 
-    Transaction* currentTransaction = block->transactions;
-    while (currentTransaction) {
+    // Validate all transactions in the block
+    for (int i = 0; i < block->transactionCount; i++) {
+        Transaction* currentTransaction = block->transactions[i];
+
         if (!is_valid_transaction(currentTransaction)) {
-            fprintf(stderr, "Invalid transaction in block %d\n", header.blockHeight);
+            fprintf(stderr, "Invalid transaction in block %d\n", block->header.blockHeight);
             return false;
         }
-        currentTransaction = currentTransaction->next;   
     }
 
     // // Check if the previous block's hash is valid
@@ -48,7 +44,7 @@ bool is_valid_block(Block* block) {
 char* calculate_block_hash(Block* block) {
     if (!block) return NULL;
 
-    unsigned char* serialized = NULL;
+    char* serialized = NULL;
     size_t length = 0;
     if (serialize_block(block, &serialized, &length) != 0) {
         fprintf(stderr, "Failed to serialize block for hashing\n");
@@ -61,6 +57,7 @@ char* calculate_block_hash(Block* block) {
         free(serialized);
         return NULL;
     }
+
     free(serialized);
 
     // Convert hash to hexadecimal string
@@ -79,18 +76,15 @@ char* calculate_block_hash(Block* block) {
 }
 
 // serialize as JSON
-int serialize_block(Block* block, char* serialized, size_t* length) {
+int serialize_block(Block* block, char** serialized, size_t* length) {
     if (!block || !serialized || !length) return -1;
 
     // Estimate size needed for serialization
     size_t size = 1024; // Base size for block metadata
     // could be more flexibale with dynamic allocation, but this is simpler for now
 
-    // Add size for each transaction
-    Transaction* currentTransaction = block->transactions;
-    while (currentTransaction) {
+    for(int i = 0; i < block->transactionCount; i++) {
         size += 512; // Estimate size per transaction
-        currentTransaction = currentTransaction->next;
     }
 
     char* buf = malloc(size);
@@ -107,9 +101,8 @@ int serialize_block(Block* block, char* serialized, size_t* length) {
                        block->header.previousHash ? block->header.previousHash : "",
                        block->note ? block->note : "");
 
-    currentTransaction = block->transactions;
-    while (currentTransaction) {
-        // save full transaction
+    for (int i = 0; i < block->transactionCount; i++) {
+        Transaction* currentTransaction = block->transactions[i];
         unsigned char* txSerialized = NULL;
         size_t txLength = 0;
         if (serialize_to_json(currentTransaction, &txSerialized, &txLength) != 0) {
@@ -120,16 +113,18 @@ int serialize_block(Block* block, char* serialized, size_t* length) {
 
         offset += snprintf(buf + offset, size - offset, "%s", txSerialized);
         free(txSerialized);
-        if (currentTransaction->next) {
+
+        if (i < block->transactionCount - 1) {
             offset += snprintf(buf + offset, size - offset, ", ");
         }
-        currentTransaction = currentTransaction->next;
+
+        offset += snprintf(buf + offset, size - offset, "] }");
     }
 
-    offset += snprintf(buf + offset, size - offset, "] }");
-
+    // save results
     *serialized = buf;
     *length = offset;
+
     return 0; // Success
 }
 
@@ -154,15 +149,16 @@ void print_block(Block* block) {
     printf("Note: %s\n", block->note ? block->note : "NULL");
 
     printf("Transactions:\n");
-    Transaction* currentTransaction = block->transactions;
-    while (currentTransaction) {
-        char* txHash = calculate_transaction_hash(currentTransaction);
+
+    for (int i = 0; i < MAX_TRANSACTIONS_PER_BLOCK && block->transactions[i]; i++) {
+        Transaction* tx = block->transactions[i];
+        if (!tx) break;
+        char* txHash = calculate_transaction_hash(tx);
         if (txHash) {
-            printf("  Transaction ID: %s, Hash: %s\n", currentTransaction->id, txHash);
+            printf("  Transaction ID: %s, Hash: %s\n", tx->id, txHash);
             free(txHash);
         } else {
-            printf("  Transaction ID: %s, Hash: NULL\n", currentTransaction->id);
+            printf("  Transaction ID: %s, Hash: NULL\n", tx->id);
         }
-        currentTransaction = currentTransaction->next;
     }
 }

@@ -3,10 +3,9 @@
 
 #include "blockchain_structs.h"
 
-Block* create_block(const char* previousHash, uint64_t proof, const char* notes, Transaction* transactions);
 bool is_valid_block(Block* block);
 char* calculate_block_hash(Block* block);
-char* serialize_block(Block* block);
+int serialize_block(Block* block, char** serialized, size_t* length);
 Block* deserialize_block(const char* data);
 void print_block(Block* block);
 

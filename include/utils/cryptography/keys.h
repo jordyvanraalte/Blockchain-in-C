@@ -1,5 +1,5 @@
-#ifndef CRYPTOGRAPHY_KEYS_H
-#define CRYPTOGRAPHY_KEYS_H
+#ifndef KEYS_H
+#define KEYS_H
 
 #include <openssl/evp.h>
 #include <openssl/err.h>
@@ -11,4 +11,4 @@ void save_private_key_to_pem(EVP_PKEY* pkey, const char* filename);
 void save_public_key_to_pem(EVP_PKEY* pkey, const char* filename);
 EVP_PKEY* load_private_key_from_pem(const char* filename);
 EVP_PKEY* load_public_key_from_pem(const char* filename);
-#endif // CRYPTOGRAPHY_KEYS_H
+#endif // KEYS_H
