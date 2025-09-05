@@ -3,7 +3,7 @@
 
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
-#include "uuid.h"
+#include "utils/uuid.h"
 
 void test_generate_uuid();
 

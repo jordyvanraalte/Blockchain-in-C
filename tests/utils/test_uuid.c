@@ -1,8 +1,8 @@
-#include "test_uuid.h"
+#include "tests/utils/test_uuid.h"
 
 void test_generate_uuid(void) {
     char uuid_str[37]; // UUID string is 36 characters + null terminator
-    generateUUID(uuid_str);
+    generate_uuid(uuid_str);
     
     // Check if the UUID is in the correct format
     CU_ASSERT_EQUAL(strlen(uuid_str), 36);

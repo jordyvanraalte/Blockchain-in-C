@@ -1,4 +1,4 @@
-#include "test_P2PKH.h"
+#include "tests/utils/test_P2PKH.h"
 
 void test_generate_P2PKH_address(void) {
     EVP_PKEY *key = generate_key_pair();

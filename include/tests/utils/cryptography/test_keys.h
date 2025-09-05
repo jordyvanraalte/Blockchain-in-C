@@ -3,7 +3,7 @@
 
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
-#include "keys.h"
+#include "utils/cryptography/keys.h"
 
 void test_generate_key_pair(void);
 void save_and_load_private_key(void);

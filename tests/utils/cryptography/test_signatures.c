@@ -1,4 +1,4 @@
-#include "test_signatures.h"
+#include "tests/utils/cryptography/test_signatures.h"
 
 void test_succesful_sign_and_verify(void) {
     const char *message = "This is a test message.";
@@ -7,7 +7,7 @@ void test_succesful_sign_and_verify(void) {
     size_t siglen = 0;
 
     // Generate a key pair
-    EVP_PKEY *pkey = EVP_RSA_gen(2048);
+    EVP_PKEY *pkey = generate_key_pair();
     CU_ASSERT_PTR_NOT_NULL_FATAL(pkey);
 
     // Sign the message
@@ -33,7 +33,7 @@ void test_failed_verify(void) {
     size_t siglen = 0;
 
     // Generate a key pair
-    EVP_PKEY *pkey = EVP_RSA_gen(2048);
+    EVP_PKEY *pkey = generate_key_pair();
     CU_ASSERT_PTR_NOT_NULL_FATAL(pkey);
 
     // Sign the original message

@@ -1,32 +1,37 @@
-#include "test_transaction.h"
+#include "tests/test_transaction.h"
+
+
 
 static void cleanup_transaction(Transaction* transaction) {
     if (!transaction) return;
 
     for (int i = 0; i < transaction->inputCount; i++) {
-        free(transaction->inputs[i]);
-    }
-    for (int i = 0; i < transaction->outputCount; i++) {
-        free(transaction->outputs[i]);
-    }
-    for (int i = 0; i < transaction->signatureCount; i++) {
-        TxSignInput* sig = transaction->signatures[i];
-        if (sig) {
-            free(sig->message);
-
-void test_is_valid_transaction(void) {
-    // TODO ADD BALANCE CHECK
-    Wallet *wallet1 = create_wallet();
-    Wallet *wallet2 = create_wallet();
-    CU_ASSERT_PTR_NOT_NULL(wallet1);
-    CU_ASSERT_PTR_NOT_NULL(wallet2);
-    if (!wallet1 || !wallet2) return;
-            free(sig->signature);
-            EVP_PKEY_free(sig->publicKey);
-            free(sig);
+        if (transaction->inputs[i]) {
+            free(transaction->inputs[i]);
         }
     }
-    free(transaction);
+    for (int i = 0; i < transaction->outputCount; i++) {
+        if (transaction->outputs[i]) {
+            free(transaction->outputs[i]);
+        }
+    }
+    for (int i = 0; i < transaction->signatureCount; i++) {
+        if (transaction->signatures[i]) {
+            TxSignInput* sig = transaction->signatures[i];
+            if (sig) {
+                if (sig->signature) {
+                    OPENSSL_free(sig->signature);
+                }
+                if (sig->publicKey) {
+                    EVP_PKEY_free(sig->publicKey);
+                }
+                if (sig->message) {
+                    free(sig->message);
+                }
+                free(sig);
+            }
+        }
+    }
 }
 
 void test_is_valid_transaction(void) {
@@ -43,17 +48,20 @@ void test_is_valid_transaction(void) {
     CU_ASSERT_EQUAL(init_result, 0);
     CU_ASSERT_PTR_NOT_NULL(tx);
 
-    TxInput input1 = { .address = wallet1->addresses[0]->address, .amount = 50 };
-
+    TxInput input1;
+    strncpy(input1.address, wallet1->addresses[0]->address, ADDRESS_MAX_LEN);
+    input1.amount = 50;
     int add_input_result = add_transaction_input(tx, input1);
     CU_ASSERT_EQUAL(add_input_result, 0);
 
-    TxOutput output1 = { .address = wallet2->addresses[0]->address, .amount = 50 };
+    TxOutput output1;
+    strncpy(output1.address, wallet2->addresses[0]->address, ADDRESS_MAX_LEN);
+    output1.amount = 50;    
     int add_output_result = add_transaction_output(tx, output1);
     CU_ASSERT_EQUAL(add_output_result, 0);
 
     // Sign the input
-    TxSignInput signature1;
+    TxSignInput *signature1 = NULL;
     int sign_result = sign_input(&signature1, &input1, tx, wallet1->addresses[0]->keys);
     CU_ASSERT_EQUAL(sign_result, 0);
 
@@ -73,6 +81,7 @@ void test_is_valid_transaction(void) {
     cleanup_transaction(tx);
     cleanup_wallet(wallet1);
     cleanup_wallet(wallet2);
+    free(signature1);
 }
 
 void test_validate_inputs(void) {
@@ -86,12 +95,14 @@ void test_validate_inputs(void) {
     CU_ASSERT_EQUAL(init_result, 0);
     CU_ASSERT_PTR_NOT_NULL(tx);
 
-    TxInput input1 = { .address = wallet->addresses[0]->address, .amount = 50 };
+    TxInput input1;
+    strncpy(input1.address, wallet->addresses[0]->address, ADDRESS_MAX_LEN);
+    input1.amount = 50;
     int add_input_result = add_transaction_input(tx, input1);
     CU_ASSERT_EQUAL(add_input_result, 0);
 
     // Sign the input
-    TxSignInput signature1;
+    TxSignInput *signature1 = NULL;
     int sign_result = sign_input(&signature1, &input1, tx, wallet->addresses[0]->keys);
     CU_ASSERT_EQUAL(sign_result, 0);
 
@@ -110,6 +121,7 @@ void test_validate_inputs(void) {
     // Clean up
     cleanup_transaction(tx);
     cleanup_wallet(wallet);
+    free(signature1);
 }
 
 void test_validate_outputs(void) {
@@ -239,21 +251,24 @@ void test_add_transaction_signature(void) {
         return;
     }
 
-    TxInput input1 = { .address = wallet->addresses[0]->address, .amount = 50 };
+    TxInput input1;
+    strncpy(input1.address, wallet->addresses[0]->address, ADDRESS_MAX_LEN);
+    input1.amount = 50;
     int add_input_result = add_transaction_input(tx, input1);
     CU_ASSERT_EQUAL(add_input_result, 0);
 
     // Sign the input
-    TxSignInput signature1;
+    TxSignInput *signature1 = NULL;
     int sign_result = sign_input(&signature1, &input1, tx, wallet->addresses[0]->keys);
     CU_ASSERT_EQUAL(sign_result, 0);
+
 
     // add signature to transaction
     int add_sig_result = add_transaction_signature(tx, signature1);
     CU_ASSERT_EQUAL(add_sig_result, 0);
     CU_ASSERT_EQUAL(tx->signatureCount, 1);
     CU_ASSERT_STRING_EQUAL(tx->signatures[0]->address, wallet->addresses[0]->address);
-    CU_ASSERT_EQUAL(tx->signatures[0]->signatureLength, signature1.signatureLength);
+    CU_ASSERT_EQUAL(tx->signatures[0]->signatureLength, signature1->signatureLength);
     CU_ASSERT_PTR_NOT_NULL(tx->signatures[0]->signature);
 
     // Clean up
@@ -275,11 +290,15 @@ void test_calculate_transaction_hash(void) {
         return;
     }
 
-    TxInput input1 = { .address = wallet->addresses[0]->address, .amount = 50 };
+    TxInput input1;
+    strncpy(input1.address, wallet->addresses[0]->address, ADDRESS_MAX_LEN);
+    input1.amount = 50;
     int add_input_result = add_transaction_input(tx, input1);
     CU_ASSERT_EQUAL(add_input_result, 0);
 
-    TxOutput output1 = { .address = "address_2", .amount = 50 };
+    TxOutput output1;
+    strncpy(output1.address, wallet->addresses[0]->address, ADDRESS_MAX_LEN);
+    output1.amount = 50;    
     int add_output_result = add_transaction_output(tx, output1);
     CU_ASSERT_EQUAL(add_output_result, 0);
 
@@ -319,16 +338,20 @@ void test_serialize_to_json(void) {
         return;
     }
 
-    TxInput input1 = { .address = wallet->addresses[0]->address, .amount = 50 };
+    TxInput input1;
+    strncpy(input1.address, wallet->addresses[0]->address, ADDRESS_MAX_LEN);
+    input1.amount = 50;
     int add_input_result = add_transaction_input(tx, input1);
     CU_ASSERT_EQUAL(add_input_result, 0);
 
-    TxOutput output1 = { .address = "address_2", .amount = 50 };
+    TxOutput output1;
+    strncpy(output1.address, wallet->addresses[0]->address, ADDRESS_MAX_LEN);
+    output1.amount = 50;    
     int add_output_result = add_transaction_output(tx, output1);
     CU_ASSERT_EQUAL(add_output_result, 0);
 
     // Sign the input
-    TxSignInput signature1;
+    TxSignInput *signature1 = NULL;
     int sign_result = sign_input(&signature1, &input1, tx, wallet->addresses[0]->keys);
     CU_ASSERT_EQUAL(sign_result, 0);
 

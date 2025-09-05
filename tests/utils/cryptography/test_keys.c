@@ -1,4 +1,4 @@
-#include "test_keys.h"
+#include "tests/utils/cryptography/test_keys.h"
 
 void test_generate_key_pair(void) {
     EVP_PKEY *key = generate_key_pair();

@@ -3,6 +3,7 @@
 
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
+#include "tests/test_wallet.h"
 #include "transaction.h"
 #include "wallet.h"
 

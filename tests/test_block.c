@@ -17,17 +17,20 @@ void test_is_valid_block(void) {
     CU_ASSERT_EQUAL(init_result, 0);
     CU_ASSERT_PTR_NOT_NULL(tx);
 
-    TxInput input1 = { .address = wallet1->addresses[0]->address, .amount = 50 };
-
+    TxInput input1;
+    strncpy(input1.address, wallet1->addresses[0]->address, ADDRESS_MAX_LEN);
+    input1.amount = 50;
     int add_input_result = add_transaction_input(tx, input1);
     CU_ASSERT_EQUAL(add_input_result, 0);
 
-    TxOutput output1 = { .address = wallet2->addresses[0]->address, .amount = 50 };
+    TxOutput output1;
+    strncpy(output1.address, wallet2->addresses[0]->address, ADDRESS_MAX_LEN);
+    output1.amount = 50;    
     int add_output_result = add_transaction_output(tx, output1);
     CU_ASSERT_EQUAL(add_output_result, 0);
 
     // Sign the input
-    TxSignInput signature1;
+    TxSignInput *signature1 = NULL;
     int sign_result = sign_input(&signature1, &input1, tx, wallet1->addresses[0]->keys);
     CU_ASSERT_EQUAL(sign_result, 0);
 

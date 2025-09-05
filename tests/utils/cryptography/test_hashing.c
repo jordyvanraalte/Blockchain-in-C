@@ -1,4 +1,4 @@
-#include "test_hashing.h"
+#include "tests/utils/cryptography/test_hashing.h"
 
 void test_sha256_hex(void) {
     const char* input = "Hello, World!";

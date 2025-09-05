@@ -7,7 +7,7 @@
 #include "blockchain.h"
 #include "wallet_structs.h" 
 
-static void cleanup_wallet(Wallet* wallet);
+void cleanup_wallet(Wallet* wallet);
 void test_create_wallet(void);
 void test_generate_new_address(void);
 

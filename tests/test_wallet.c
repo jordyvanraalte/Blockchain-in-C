@@ -1,6 +1,6 @@
-#include "test_wallet.h"
+#include "tests/test_wallet.h"
 
-static void cleanup_wallet(Wallet* wallet) {
+void cleanup_wallet(Wallet* wallet) {
     if (!wallet) return;
 
     for (int i = 0; i < wallet->addressCount; i++) {
@@ -11,6 +11,7 @@ static void cleanup_wallet(Wallet* wallet) {
     }
     free(wallet);
 }
+
 
 void test_create_wallet(void) {
     Wallet* wallet = create_wallet();
