@@ -38,7 +38,7 @@ Node* initialize_node(char* host, int port) {
     error:
         if (node) free(node);
         if (blockchain) free(blockchain);
-        if (wallet) cleanup_wallet(wallet);
+        // TODO ADD CLEANUP //if (wallet) cleanup_wallet(wallet);
         exit(EXIT_FAILURE);
 
     return node;
@@ -89,7 +89,9 @@ int start_node(Node* node, const char* peerHost, int peerPort, bool mining) {
     return 0; // Success
 }
 
-void* start_client(Node* node) {
+void* start_client(void* arg) {
+    Node* node = (Node*)arg;
+    
     if (!node  <= 0) return NULL;
 
     while (!node->isRunning) {
@@ -104,7 +106,10 @@ void* start_client(Node* node) {
     return NULL;
 }
 
-void* start_server(Node* node) {
+void* start_server(void* arg) {
+    Node* node = (Node*)arg;
+    if (!node || node->port <= 0) return NULL;
+
     int server_fd, new_socket;
     struct sockaddr_in address;
     int opt = 1;
@@ -154,7 +159,7 @@ void* start_server(Node* node) {
 
         // Handle the new connection (e.g., spawn a new thread or process)
         printf("New connection accepted\n");
-        handle_incoming_connection(new_socket, net_ntoa(address.sin_addr), ntohs(address.sin_port), node, node->blockchain);
+        handle_incoming_connection(new_socket, inet_ntoa(address.sin_addr), ntohs(address.sin_port), node, node->blockchain);
 
         close(new_socket); // Close the socket after handling
         sleep(1);
@@ -186,7 +191,13 @@ int add_peer(Node* node, const char* host, int port) {
     return 0; // Success
 }
 
-void* start_mining(Node* node, Blockchain* blockchain, const char* miningAddress, int difficulty) {
+void* start_mining(void* arg) {
+    // TODO change input to struct with all params
+    Node* node = (Node*)arg;
+    Blockchain* blockchain = node->blockchain;
+    const char* miningAddress = node->wallet->addresses[0]->address;
+    int difficulty = STANDARD_DIFFICULTY; // This could be dynamic based on network conditions
+    
     if (!blockchain || !miningAddress || difficulty < STANDARD_DIFFICULTY) {
         fprintf(stderr, "Invalid parameters for mining\n");
         return NULL;
@@ -427,7 +438,8 @@ void handle_incoming_connection(int client_socket, const char* client_host, int 
             break;
         }
         case TRANSACTION: {
-            Transaction* transaction = deserialize_transaction(message.data);
+            Transaction* transaction = NULL;
+            deserialize_transaction_from_json((unsigned char*)message.data, message.length, &transaction);
             if (transaction) {
                 receive_transaction(blockchain, transaction);
                 free(transaction); // Free the transaction after processing
@@ -482,9 +494,9 @@ void broadcast_new_transaction(Blockchain* blockchain, Transaction* transaction)
     if (!blockchain || !transaction) return;
 
     // Serialize the transaction
-    char* serializedTx = NULL;
+    unsigned char* serializedTx = NULL;
     size_t length = 0;
-    if (serialize_transaction(transaction, &serializedTx, &length) != 0) {
+    if (serialize_transaction_to_json(transaction, &serializedTx, &length) != 0) {
         fprintf(stderr, "Failed to serialize transaction for broadcasting\n");
         return;
     }
@@ -508,7 +520,13 @@ void broadcast_new_transaction(Blockchain* blockchain, Transaction* transaction)
     free(message.peerId);
 }
 
-void synchronize_blockchain(Blockchain* blockchain, const char* peerHost, int peerPort);
+void synchronize_blockchain(Blockchain* blockchain, const char* peerHost, int peerPort) {
+    if (!blockchain || !peerHost || peerPort <= 0) return;
+
+    // Implement blockchain synchronization logic here
+    printf("Synchronizing blockchain with peer %s:%d\n", peerHost, peerPort);
+    // This could involve requesting the latest blocks from the peer and updating the local blockchain
+}
 
 void receive_block(Blockchain* blockchain, Block* block) {
     if (!blockchain || !block) return;
@@ -569,7 +587,7 @@ void free_node(Node* node) {
         free(node->blockchain);
     }
     if (node->wallet) {
-        cleanup_wallet(node->wallet);
+        //TODO//cleanup_wallet(node->wallet);
     }
     for (int i = 0; i < node->peerCount; i++) {
         free(node->peers[i].host);

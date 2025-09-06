@@ -273,7 +273,7 @@ int add_transaction_signature(Transaction* transaction, TxSignInput* signature) 
     return 0; // Success, caller should free the signature after use
 }
 
-int serialize_to_json(Transaction* transaction, unsigned char** buffer, size_t* length) {
+int serialize_transaction_to_json(Transaction* transaction, unsigned char** buffer, size_t* length) {
     if (!transaction || !buffer || !length) return -1;
 
     // Estimate the size needed for serialization
@@ -304,12 +304,18 @@ int serialize_to_json(Transaction* transaction, unsigned char** buffer, size_t* 
     return 0; // Success
 }
 
+int deserialize_transaction_from_json(const unsigned char* data, size_t length, Transaction** transaction) {
+    // TODO implement
+}
+
+    
+
 char* calculate_transaction_hash(Transaction* transaction) {
     if (!transaction) return NULL;
 
     unsigned char* serialized = NULL;
     size_t length = 0;
-    if (serialize_to_json(transaction, &serialized, &length) != 0) {
+    if (serialize_transaction_to_json(transaction, &serialized, &length) != 0) {
         fprintf(stderr, "Failed to serialize transaction for hashing\n");
         return NULL;
     }
@@ -361,7 +367,7 @@ char* serialize_transaction_for_signing(Transaction* transaction) {
     unsigned char *data = NULL;
     size_t dataLen = 0;
     // do not include signatures in the serialization
-    if (serialize_to_json(transaction, &data, &dataLen) != 0) {
+    if (serialize_transaction_to_json(transaction, &data, &dataLen) != 0) {
         fprintf(stderr, "Failed to serialize transaction for signing\n");
         return NULL;
     }

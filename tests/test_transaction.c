@@ -357,7 +357,7 @@ void test_serialize_to_json(void) {
 
     unsigned char* buffer = NULL;
     size_t length = 0;
-    int serialize_result = serialize_to_json(tx, &buffer, &length);
+    int serialize_result = serialize_transaction_to_json(tx, &buffer, &length);
     CU_ASSERT_EQUAL(serialize_result, 0);
     CU_ASSERT_PTR_NOT_NULL(buffer);
     CU_ASSERT(length > 0);

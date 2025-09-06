@@ -5,12 +5,14 @@
 #include "blockchain.h"
 #include "wallet.h"
 #include "mine.h"
+#include "transaction.h"
 #include "blockchain_structs.h"
 #include "stdbool.h"
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <arpa/inet.h>
 #include "utils/uuid.h"
 
 #define MAX_PEERS 10
@@ -41,7 +43,7 @@ typedef struct Peer {
 } Peer;
 
 typedef struct Node {
-    char* id[UUID_ID_LENGTH];
+    char id[UUID_ID_LENGTH];
     Blockchain* blockchain;
     Wallet* wallet;
     char* host;
@@ -52,18 +54,32 @@ typedef struct Node {
     bool isMining;
 } Node;
 
-Node* initialize_node();
+Node* initialize_node(char* host, int port);
 int start_node(Node* node, const char* peerHost, int peerPort, bool mining);
-void* start_mining(Node* node, Blockchain* blockchain, const char* miningAddress, int difficulty);
-void* start_server(Node* node);
+void* start_mining(void* arg);
+void* start_server(void* arg);
+void* start_client(void* arg);
 void stop_node();
 
 // network functions
-void broadcast_new_block(Blockchain* blockchain, Block* block);
+void broadcast_new_block(Node* node, Blockchain* blockchain, Block* block);
 void broadcast_new_transaction(Blockchain* blockchain, Transaction* transaction);
 void synchronize_blockchain(Blockchain* blockchain, const char* peerHost, int peerPort);
 
 void receive_block(Blockchain* blockchain, Block* block);
 void receive_transaction(Blockchain* blockchain, Transaction* transaction);
+
+void remove_peer(Node* node, const char* peerId);
+int add_peer(Node* node, const char* host, int port);
+int send_message(const Peer* peer, const PeerMessage* message);
+int receive_message(int socket, PeerMessage* message);
+void send_connect(const Peer* peer, const char* nodeId);
+void send_acknowledge(const Peer* peer, const char* nodeId);
+void send_ping(const Peer* peer, const char* nodeId);
+void send_pong(const Peer* peer, const char* nodeId);
+void send_disconnect(const Peer* peer, const char* nodeId);
+void handle_incoming_connection(int client_socket, const char* client_host, int client_port, Node* node, Blockchain* blockchain);
+void get_peer(Node* node, const char* peerId, Peer* outPeer);
+void cleanup_node(Node* node);
 
 #endif // NODE_H

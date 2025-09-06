@@ -133,7 +133,7 @@ int serialize_block(Block* block, char** serialized, size_t* length) {
         Transaction* currentTransaction = block->transactions[i];
         unsigned char* txSerialized = NULL;
         size_t txLength = 0;
-        if (serialize_to_json(currentTransaction, &txSerialized, &txLength) != 0) {
+        if (serialize_transaction_to_json(currentTransaction, &txSerialized, &txLength) != 0) {
             fprintf(stderr, "Failed to serialize transaction in block %s\n", block->header.blockHeight);
             free(buf);
             return -1;
