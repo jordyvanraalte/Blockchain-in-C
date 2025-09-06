@@ -2,7 +2,10 @@
 #define BLOCK_H
 
 #include "blockchain_structs.h"
+#include "string.h"
 
+
+int create_block(Block** block, Block* lastBlock, Transaction* transactions, uint64_t nonce, uint64_t difficulty, char* previousHash, char* notes);
 bool is_valid_block(Block* block);
 char* calculate_block_hash(Block* block);
 int serialize_block(Block* block, char** serialized, size_t* length);

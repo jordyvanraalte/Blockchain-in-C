@@ -19,6 +19,7 @@ int get_total_output_amount(Transaction* transaction);
 
 // transaction management
 int initialize_transaction(Transaction** transaction);
+int initialize_coinbase_transaction(Transaction** transaction, const char* minerAddress, uint32_t reward);
 int add_transaction_input(Transaction* transaction, TxInput input);
 int add_transaction_output(Transaction* transaction, TxOutput output);
 int add_transaction_signature(Transaction* transaction, TxSignInput* signature);

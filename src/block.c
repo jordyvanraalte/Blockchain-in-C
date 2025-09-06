@@ -8,12 +8,12 @@ bool is_valid_block(Block* block) {
     BlockHeader header = block->header;
 
     if (header.previousHash == NULL) {
-        fprintf(stderr, "Block %s has no previous hash\n", header.id);
+        fprintf(stderr, "Block %s has no previous hash\n", header.blockHeight);
         return false;
     }
 
     if (header.difficulty < STANDARD_DIFFICULTY || header.nonce < 0) {
-        fprintf(stderr, "Block %s has invalid difficulty %llu\n", header.id, header.difficulty);
+        fprintf(stderr, "Block %s has invalid difficulty %llu\n", header.blockHeight, header.difficulty);
         return false;
     }
 
@@ -92,7 +92,6 @@ int serialize_block(Block* block, char** serialized, size_t* length) {
 
     int offset = 0;
     offset += snprintf(buf + offset, size - offset, "{ \"id\": \"%s\", \"version\": %u, \"blockHeight\": %llu, \"timestamp\": %ld, \"nonce\": %llu, \"difficulty\": %llu, \"previousHash\": \"%s\", \"note\": \"%s\", \"transactions\": [",
-                       block->header.id,
                        block->header.version,
                        block->header.blockHeight,
                        block->header.timestamp,
@@ -106,7 +105,7 @@ int serialize_block(Block* block, char** serialized, size_t* length) {
         unsigned char* txSerialized = NULL;
         size_t txLength = 0;
         if (serialize_to_json(currentTransaction, &txSerialized, &txLength) != 0) {
-            fprintf(stderr, "Failed to serialize transaction in block %s\n", block->header.id);
+            fprintf(stderr, "Failed to serialize transaction in block %s\n", block->header.blockHeight);
             free(buf);
             return -1;
         }
@@ -139,7 +138,6 @@ void print_block(Block* block) {
         return;
     }
 
-    printf("Block ID: %s\n", block->header.id);
     printf("Version: %u\n", block->header.version);
     printf("Block Height: %llu\n", block->header.blockHeight);
     printf("Timestamp: %ld\n", block->header.timestamp);
@@ -161,4 +159,42 @@ void print_block(Block* block) {
             printf("  Transaction ID: %s, Hash: NULL\n", tx->id);
         }
     }
+}
+
+int create_block(Block** block, Block* lastBlock, Transaction* transactions, uint64_t nonce, uint64_t difficulty, char* previousHash, char* notes) {
+    if (!block || !transactions || !lastBlock) return -1;
+
+    *block = malloc(sizeof(Block));
+    if (!*block) {
+        fprintf(stderr, "Memory allocation failed for Block\n");
+        return -1;
+    }
+
+    memset(*block, 0, sizeof(Block)); // Zero out the block memory
+
+    BlockHeader* header = &(*block)->header;
+    header->blockHeight = lastBlock ? lastBlock->header.blockHeight + 1 : 0;
+    header->timestamp = time(NULL);
+    header->version = 1; // Starting with version 1
+    header->difficulty = difficulty;
+    header->nonce = nonce;
+    strcpy(header->previousHash, previousHash ? previousHash : "");
+
+    // shallow copy of transactions
+    int txIndex = 0;
+    Transaction* currentTransaction = transactions;
+    while (currentTransaction && txIndex < MAX_TRANSACTIONS_PER_BLOCK) {
+        (*block)->transactions[txIndex] = currentTransaction;
+        currentTransaction = currentTransaction->next;
+        txIndex++;
+    }
+    (*block)->transactionCount = txIndex;
+
+    if (notes) {
+        strncpy((*block)->note, notes, MAX_NOTES_LENGTH);
+    } else {
+        (*block)->note[0] = '\0';
+    }
+
+    return 0; // Success
 }

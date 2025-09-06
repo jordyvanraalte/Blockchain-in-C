@@ -155,6 +155,29 @@ int initialize_transaction(Transaction** transaction) {
     return 0; // Success
 }
 
+int initialize_coinbase_transaction(Transaction** transaction, const char* minerAddress, uint32_t reward) {
+    if (!transaction || !minerAddress || reward == 0) return -1;
+
+    if (initialize_transaction(transaction) != 0) {
+        return -1; // Error initializing transaction
+    }
+
+    (*transaction)->isCoinbase = true;
+
+    // Create a single output to the miner's address with the reward amount
+    TxOutput coinbaseOutput;
+    memset(&coinbaseOutput, 0, sizeof(TxOutput)); // Zero out the output
+    coinbaseOutput.amount = reward;
+    strncpy(coinbaseOutput.address, minerAddress, MAX_ADDRESS_LENGTH);
+
+    if (add_transaction_output(*transaction, coinbaseOutput) != 0) {
+        free(*transaction);
+        return -1; // Error adding output
+    }
+
+    return 0; // Success
+}
+
 int add_transaction_input(Transaction* transaction, TxInput input) {
     if (!transaction) {
         fprintf(stderr, "Transaction is NULL\n");

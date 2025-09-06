@@ -60,7 +60,6 @@ typedef struct Transaction {
 } Transaction;
 
 typedef struct BlockHeader {
-    char id[UUID_ID_LENGTH];
     uint32_t version;
     uint64_t blockHeight;
     time_t timestamp;
