@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include <openssl/evp.h>
 
+int create_genesis_transaction(Transaction** transaction, const char* genesisAddress, uint32_t reward);
 bool is_valid_transaction(Transaction* transaction);
 bool validate_inputs(Transaction* transaction);
 bool validate_outputs(Transaction* transaction);

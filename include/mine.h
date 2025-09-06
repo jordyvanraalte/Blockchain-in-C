@@ -1,3 +1,7 @@
+#ifndef MINE_H
+#define MINE_H
+
+
 #include <string.h> 
 
 #include "blockchain_structs.h"
@@ -9,3 +13,4 @@
 
 int mine_block(Blockchain* blockchain, Block* block, char* miningAddress, int difficulty, char* notes);
 
+#endif // MINE_H

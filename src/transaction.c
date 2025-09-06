@@ -1,5 +1,28 @@
 #include "transaction.h"
 
+int create_genesis_transaction(Transaction** transaction, const char* genesisAddress, uint32_t reward) {
+    if (!transaction || !genesisAddress || reward == 0) return -1;
+
+    if (initialize_transaction(transaction) != 0) {
+        return -1; // Error initializing transaction
+    }
+
+    (*transaction)->isCoinbase = true;
+
+    // Create a single output to the miner's address with the reward amount
+    TxOutput coinbaseOutput;
+    memset(&coinbaseOutput, 0, sizeof(TxOutput)); // Zero out the output
+    coinbaseOutput.amount = reward;
+    strncpy(coinbaseOutput.address, genesisAddress, MAX_ADDRESS_LENGTH);
+
+    if (add_transaction_output(*transaction, coinbaseOutput) != 0) {
+        free(*transaction);
+        return -1; // Error adding output
+    }
+
+    return 0; // Success
+}
+
 bool is_valid_transaction(Transaction* transaction) {
     if (!transaction) return false;
 

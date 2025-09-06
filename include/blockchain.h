@@ -6,6 +6,8 @@
 #include "transaction.h"
 #include <stdio.h>
 
+#define GENESIS_BLOCK_ADDRESS "AbpBXb4TpV53RkPyCojjmEmd1gS+jUbXgA=="
+#define GENESIS_AWARD 1000000
 
 void initialize_block(Block* block);
 int add_block(Blockchain* blockchain, Block* block);

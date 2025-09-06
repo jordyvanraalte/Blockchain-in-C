@@ -2,6 +2,39 @@
 
 // TODO ADD FUNCTIONALITY FOR GENEISS BLOCK
 
+int initialize_genesis_block(Block** block) {
+    *block = (Block*)malloc(sizeof(Block));
+    if (!*block) return -1;
+
+    initialize_block(*block);
+    (*block)->header.version = 1;
+    (*block)->header.blockHeight = 0;
+    (*block)->header.timestamp = time(NULL);
+    (*block)->header.nonce = 0;
+    (*block)->header.difficulty = STANDARD_DIFFICULTY;
+    strcpy((*block)->header.previousHash, ""); // No previous hash for genesis block
+
+    // Create a coinbase transaction for the genesis block
+    Transaction* transaction = NULL;
+    create_genesis_transaction(&transaction, GENESIS_BLOCK_ADDRESS, GENESIS_AWARD);
+
+    // add genesis transaction to block§
+    add_transaction_to_block(*block, transaction);
+    snprintf((*block)->note, MAX_NOTES_LENGTH, "Genesis Block");
+
+    cleanup:
+    if (transaction) {
+        (*block)->transactions[0] = transaction;
+        (*block)->transactionCount = 1;
+    } else {
+        free(*block);
+        *block = NULL;
+        return -1; // Failed to create genesis transaction
+    }
+
+    return 0; // Success
+}
+
 int add_block(Blockchain* blockchain, Block* block) {
     if (!blockchain || !block) return -1;
 

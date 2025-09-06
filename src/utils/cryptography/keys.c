@@ -2,6 +2,7 @@
 
 /*
 https://linux.die.net/man/3/evp_pkey_keygen
+generates a RSA key pair and returns it as an EVP_PKEY structure.
 Envelope encryption is a technique that allows you to encrypt data using a symmetric key, and then encrypt that symmetric key with an asymmetric key pair (public/private key). This is often used in secure communications.
 The `EVP_PKEY` structure is used to represent public and private keys in OpenSSL.
 The `EVP_PKEY_CTX` structure is used to hold the context for key generation operations

@@ -2,6 +2,18 @@
 #include "transaction.h"
 #include <stdio.h>
 
+int add_transaction_to_block(Block* block, Transaction* transaction) {
+    if (!block || !transaction) return -1;
+    if (block->transactionCount >= MAX_TRANSACTIONS_PER_BLOCK) {
+        fprintf(stderr, "Block has reached maximum transaction capacity\n");
+        return -1;
+    }
+
+    block->transactions[block->transactionCount] = transaction;
+    block->transactionCount++;
+    return 0; // Success
+}
+
 bool is_valid_block(Block* block) {
     if (!block) return false;
 
