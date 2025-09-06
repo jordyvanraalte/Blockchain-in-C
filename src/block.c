@@ -139,8 +139,19 @@ int serialize_block(Block* block, char** serialized, size_t* length) {
     return 0; // Success
 }
 
+// from json to block
 Block* deserialize_block(const char* data) {
-    // TODO implement this function to parse JSON and create a Block struct
+    Block* block = malloc(sizeof(Block));
+    if (!block) {
+        fprintf(stderr, "Memory allocation failed for Block\n");
+        return NULL;
+    }
+
+    memset(block, 0, sizeof(Block)); // Zero out the block memory
+    BlockHeader* header = &block->header;
+    
+
+
     return NULL;
 }
 

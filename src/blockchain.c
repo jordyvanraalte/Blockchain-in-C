@@ -35,6 +35,34 @@ int initialize_genesis_block(Block** block) {
     return 0; // Success
 }
 
+int initialize_blockchain(Blockchain* blockchain) {
+    if (!blockchain) return -1;
+
+    blockchain->blocks = NULL;
+    blockchain->blockCount = 0;
+    blockchain->latestBlock = NULL;
+    blockchain->mempoolCount = 0;
+    for (int i = 0; i < MAX_MEMPOOL_SIZE; i++) {
+        blockchain->mempool[i] = NULL;
+    }
+
+    // Initialize the genesis block
+    Block* genesisBlock = NULL;
+    if (initialize_genesis_block(&genesisBlock) != 0) {
+        fprintf(stderr, "Failed to initialize genesis block\n");
+        return -1; // Error initializing genesis block
+    }
+
+    // Add the genesis block to the blockchain
+    if (add_block(blockchain, genesisBlock) != 0) {
+        fprintf(stderr, "Failed to add genesis block to blockchain\n");
+        free(genesisBlock);
+        return -1; // Error adding genesis block
+    }
+
+    return 0; // Success
+}
+
 int add_block(Blockchain* blockchain, Block* block) {
     if (!blockchain || !block) return -1;
 
