@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
                 }
             }
     
-            Node* node = initialize_node();
+            Node* node = initialize_node("127.0.0.1", DEFAULT_PORT);
             if (!node) {
                 fprintf(stderr, "Failed to initialize node\n");
                 return EXIT_FAILURE;

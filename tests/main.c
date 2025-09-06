@@ -9,6 +9,8 @@
 #include "tests/test_wallet.h"
 #include "tests/test_transaction.h"
 #include "tests/test_block.h"
+#include "tests/test_blockchain.h"
+#include "tests/test_mine.h"
 
 int main() {
     CU_initialize_registry();
@@ -45,7 +47,19 @@ int main() {
     CU_add_test(suite, "Test Is Valid Block", test_is_valid_block);
     CU_add_test(suite, "Test Calculate Block Hash", test_calculate_block_hash);
     CU_add_test(suite, "Test Serialize Block", test_serialize_block);
-    CU_add_test(suite, "Test Deserialize Block", test_deserialize_block);   
+    CU_add_test(suite, "Test Deserialize Block", test_deserialize_block); 
+    
+    suite = CU_add_suite("Blockchain Tests", NULL, NULL);
+    CU_add_test(suite, "Test Initialize Blockchain", test_initialize_blockchain);
+    CU_add_test(suite, "Test Initialize Genesis Block", test_initialize_genesis_block);
+    CU_add_test(suite, "Test Add Block", test_add_block);
+    CU_add_test(suite, "Test Add Transaction", test_add_transaction);
+    CU_add_test(suite, "Test Remove Transaction", test_remove_transaction);
+    CU_add_test(suite, "Test Clear Mempool", test_clear_mempool);
+    CU_add_test(suite, "Test Validate Blockchain", test_validate_blockchain);
+
+    suite = CU_add_suite("Mining Tests", NULL, NULL);
+    CU_add_test(suite, "Test Mine Block", test_mine_block);
 
     CU_basic_run_tests();
     CU_cleanup_registry();

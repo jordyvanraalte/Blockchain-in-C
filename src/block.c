@@ -120,7 +120,7 @@ int serialize_block(Block* block, char** serialized, size_t* length) {
     if (!buf) return -1;
 
     int offset = 0;
-    offset += snprintf(buf + offset, size - offset, "{ \"id\": \"%s\", \"version\": %u, \"blockHeight\": %llu, \"timestamp\": %ld, \"nonce\": %llu, \"difficulty\": %llu, \"previousHash\": \"%s\", \"note\": \"%s\", \"transactions\": [",
+    offset += snprintf(buf + offset, size - offset, "{\"version\": %u, \"blockHeight\": %llu, \"timestamp\": %ld, \"nonce\": %llu, \"difficulty\": %llu, \"previousHash\": \"%s\", \"note\": \"%s\", \"transactions\": [",
                        block->header.version,
                        block->header.blockHeight,
                        block->header.timestamp,

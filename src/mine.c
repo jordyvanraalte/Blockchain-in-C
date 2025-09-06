@@ -1,14 +1,14 @@
 #include "mine.h"
 
-int mine_block(Blockchain* blockchain, Block* block, char* miningAddress, int difficulty, char* notes) {
+int mine_block(Blockchain* blockchain, Block** block, char* miningAddress, int difficulty, char* notes) {
     if (!block) return 1;
     
     int verifiedCount = 0;
 
-    // verify transactions and build a linked list of verified transactions
+    // verify transactions from the mempool and build a linked list of verified transactions
     Transaction *verifiedHead = NULL, *verifiedTail = NULL;
-    for (int i = 0; i < block->transactionCount; i++) {
-        Transaction *tx = block->transactions[i];
+    for (int i = 0; i < blockchain->mempoolCount; i++) {
+        Transaction *tx = blockchain->mempool[i];
         if (is_valid_transaction(tx)) {
             if (!verifiedHead) {
                 verifiedHead = tx;
@@ -18,11 +18,13 @@ int mine_block(Blockchain* blockchain, Block* block, char* miningAddress, int di
                 verifiedTail = tx;
             }
             tx->next = NULL;
+            verifiedCount++;
         } else {
-            fprintf(stderr, "Invalid transaction %d skipped during mining\n", tx->id);
+            fprintf(stderr, "Invalid transaction %s skipped during mining\n", tx->id);
         }
     }
 
+    // create coinbase transaction
     Transaction *coinbaseTx = NULL;
     if (initialize_coinbase_transaction(&coinbaseTx, miningAddress, COINBASE_REWARD) != 0) {
         fprintf(stderr, "Failed to create coinbase transaction\n");
@@ -56,8 +58,8 @@ int mine_block(Blockchain* blockchain, Block* block, char* miningAddress, int di
                 printf("Mining nonce: %llu\n", nonce);
             }
             
-            create_block(&block, blockchain->latestBlock, coinbaseTx, nonce, difficulty, previousHash, notes);
-            hash = calculate_block_hash(block);
+            create_block(block, blockchain->latestBlock, coinbaseTx, nonce, difficulty, previousHash, notes);
+            hash = calculate_block_hash(*block);
 
             // check if hash meets difficulty target
             if (hash && strncmp(hash, targetPrefix, difficulty) == 0) {
@@ -73,6 +75,10 @@ int mine_block(Blockchain* blockchain, Block* block, char* miningAddress, int di
             
             nonce++;
         }
+    }
+    else {
+        fprintf(stderr, "Not enough valid transactions to mine a block\n");
+        goto cleanup;
     }
 
     if (nonce == MAX_NONCE) {

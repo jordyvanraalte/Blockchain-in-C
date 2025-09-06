@@ -13,5 +13,6 @@ void test_add_transaction(void);
 void test_remove_transaction(void);
 void test_clear_mempool(void);
 void test_validate_blockchain(void);
+void cleanup(Blockchain* blockchain);
 
 #endif // TEST_BLOCKCHAIN_H
