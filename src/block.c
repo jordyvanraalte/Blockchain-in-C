@@ -2,6 +2,23 @@
 #include "transaction.h"
 #include <stdio.h>
 
+int initialize_block(Block* block) {
+    if (!block) return -1;
+
+    block->header.version = 1;
+    block->header.blockHeight = 0;
+    block->header.timestamp = time(NULL);
+    block->header.nonce = 0;
+    block->header.difficulty = STANDARD_DIFFICULTY;
+    strcpy(block->header.previousHash, "");
+    block->previousBlock = NULL;
+    block->transactionCount = 0;
+    memset(block->transactions, 0, sizeof(block->transactions));
+    memset(block->note, 0, sizeof(block->note));
+
+    return 0; // Success
+}
+
 int add_transaction_to_block(Block* block, Transaction* transaction) {
     if (!block || !transaction) return -1;
     if (block->transactionCount >= MAX_TRANSACTIONS_PER_BLOCK) {
