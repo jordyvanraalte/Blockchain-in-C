@@ -54,7 +54,7 @@ typedef struct Node {
 
 Node* initialize_node();
 int start_node(Node* node, const char* peerHost, int peerPort, bool mining);
-void* start_mining(Node* node, Blockchain* blockchain, const char* miningAddress, int difficulty)
+void* start_mining(Node* node, Blockchain* blockchain, const char* miningAddress, int difficulty);
 void* start_server(Node* node);
 void stop_node();
 
