@@ -3,7 +3,7 @@
 
 #include <CUnit/CUnit.h>
 #include <CUnit/Basic.h>
-
+#include "mine.h"
 #include "blockchain.h"
 
 void test_initialize_blockchain(void);

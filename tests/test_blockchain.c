@@ -99,7 +99,7 @@ void test_initialize_genesis_block(void) {
     CU_ASSERT_EQUAL(genesisTx->inputCount, 0);
     CU_ASSERT_EQUAL(genesisTx->outputCount, 1);
     CU_ASSERT_PTR_NOT_NULL(genesisTx->outputs[0]);
-    CU_ASSERT_EQUAL(genesisTx->outputs[0]->amount, 50); // Coinbase amount
+    CU_ASSERT_EQUAL(genesisTx->outputs[0]->amount, GENESIS_AWARD); // Coinbase amount
     CU_ASSERT_PTR_NULL(genesisTx->next);
 
     // Clean up
@@ -120,6 +120,7 @@ void test_add_block(void) {
     CU_ASSERT_PTR_NOT_NULL(blockchain->latestBlock);
     CU_ASSERT_EQUAL(blockchain->blockCount, 1); // Genesis block should be present
 
+    Block* genesisBlock = blockchain->latestBlock;
     // Create a new block
     Block* newBlock = (Block*)malloc(sizeof(Block));
     CU_ASSERT_PTR_NOT_NULL(newBlock);
@@ -128,16 +129,13 @@ void test_add_block(void) {
         free(blockchain);
         return;
     }
-    newBlock->header.blockHeight = 1; // Next block height
-    newBlock->transactionCount = 0;
-    newBlock->previousBlock = NULL; // Will be set in add_block
-    memset(newBlock->note, 0, MAX_NOTES_LENGTH);
 
+    mine_block(blockchain, &newBlock, "TestMiningAddress", 2, "Test Block");
     int add_result = add_block(blockchain, newBlock);
     CU_ASSERT_EQUAL(add_result, 0);
     CU_ASSERT_EQUAL(blockchain->blockCount, 2); // Now should have 2 blocks
     CU_ASSERT_PTR_EQUAL(blockchain->latestBlock, newBlock);
-    CU_ASSERT_PTR_EQUAL(newBlock->previousBlock, blockchain->blocks); // Previous block should be genesis block
+    CU_ASSERT_PTR_EQUAL(newBlock->previousBlock, genesisBlock); // Previous block should be genesis block
 
     cleanup(blockchain);
     free(blockchain);
