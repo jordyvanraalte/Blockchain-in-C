@@ -213,7 +213,7 @@ void* start_mining(void* arg) {
         }
 
         // Mine the block
-        if (mine_block(blockchain, newBlock, miningAddress, difficulty, "Mined by node") == 0) {
+        if (mine_block(blockchain, &newBlock, miningAddress, difficulty, "Mined by node") == 0) {
             // Successfully mined a block
             printf("Successfully mined a new block at height %llu\n", newBlock->header.blockHeight);
             add_block(blockchain, newBlock);
@@ -428,7 +428,8 @@ void handle_incoming_connection(int client_socket, const char* client_host, int 
             printf("Received PONG message\n");
             break;
         case BLOCK: {
-            Block* block = deserialize_block(message.data);
+            Block* block = NULL; 
+            deserialize_block(message.data, &block);
             if (block) {
                 receive_block(blockchain, block);
                 free(block); // Free the block after processing
@@ -468,7 +469,7 @@ void broadcast_new_block(Node* node, Blockchain* blockchain, Block* block) {
     // Serialize the block
     char* serializedBlock = NULL;
     size_t length = 0;
-    if (serialize_block(block, &serializedBlock, &length) != 0) {
+    if (serialize_block_to_json(block, &serializedBlock, &length) != 0) {
         fprintf(stderr, "Failed to serialize block for broadcasting\n");
         return;
     }
@@ -496,7 +497,7 @@ void broadcast_new_transaction(Blockchain* blockchain, Transaction* transaction)
     // Serialize the transaction
     unsigned char* serializedTx = NULL;
     size_t length = 0;
-    if (serialize_transaction_to_json(transaction, &serializedTx, &length) != 0) {
+    if (serialize_transaction_to_json(transaction, &serializedTx, &length, true) != 0) {
         fprintf(stderr, "Failed to serialize transaction for broadcasting\n");
         return;
     }

@@ -127,3 +127,73 @@ EVP_PKEY* load_public_key_from_pem(const char* filename) {
 
     return pkey;
 }
+
+void get_public_key_pem(EVP_PKEY* pkey, char** pem, size_t* pem_length) {
+    if (!pkey || !pem || !pem_length) {
+        fprintf(stderr, "Invalid parameters to get_public_key_pem\n");
+        return;
+    }
+
+    BIO* bio = BIO_new(BIO_s_mem());
+    if (!bio) {
+        fprintf(stderr, "Failed to create BIO for public key PEM\n");
+        return;
+    }
+
+    if (PEM_write_bio_PUBKEY(bio, pkey) != 1) {
+        fprintf(stderr, "Failed to write public key to BIO\n");
+        BIO_free(bio);
+        return;
+    }
+
+    BUF_MEM* bptr;
+    BIO_get_mem_ptr(bio, &bptr);
+
+    *pem = (char*)malloc(bptr->length + 1);
+    if (!*pem) {
+        fprintf(stderr, "Memory allocation failed for public key PEM\n");
+        BIO_free(bio);
+        return;
+    }
+
+    memcpy(*pem, bptr->data, bptr->length);
+    (*pem)[bptr->length] = '\0'; // Null-terminate the string
+    *pem_length = bptr->length;
+
+    BIO_free(bio);
+}
+
+void get_private_key_pem(EVP_PKEY* pkey, char** pem, size_t* pem_length) {
+    if (!pkey || !pem || !pem_length) {
+        fprintf(stderr, "Invalid parameters to get_private_key_pem\n");
+        return;
+    }
+
+    BIO* bio = BIO_new(BIO_s_mem());
+    if (!bio) {
+        fprintf(stderr, "Failed to create BIO for private key PEM\n");
+        return;
+    }
+
+    if (PEM_write_bio_PrivateKey(bio, pkey, NULL, NULL, 0, NULL, NULL) != 1) {
+        fprintf(stderr, "Failed to write private key to BIO\n");
+        BIO_free(bio);
+        return;
+    }
+
+    BUF_MEM* bptr;
+    BIO_get_mem_ptr(bio, &bptr);
+
+    *pem = (char*)malloc(bptr->length + 1);
+    if (!*pem) {
+        fprintf(stderr, "Memory allocation failed for private key PEM\n");
+        BIO_free(bio);
+        return;
+    }
+
+    memcpy(*pem, bptr->data, bptr->length);
+    (*pem)[bptr->length] = '\0'; // Null-terminate the string
+    *pem_length = bptr->length;
+
+    BIO_free(bio);
+}

@@ -1,9 +1,12 @@
 # Compiler definitions
 CC := gcc
 CFLAGS := -Wall -Wextra -g
-LDFLAGS := -lcrypto -luuid
+LDFLAGS := -luuid
 OPENSSL_LIBS := -lcrypto
-CUNIT_LIBS = -lcunit
+CUNIT_LIBS := -lcunit
+JSON_C_LIBS := -ljson-c
+
+LIBS := $(OPENSSL_LIBS) $(CUNIT_LIBS) $(JSON_C_LIBS) $(LDFLAGS)
 MAIN_SRC := src/main.c
 
 # Directories and target
@@ -34,7 +37,7 @@ all: $(BUILD_DIR)/$(TARGET_EXEC) $(TARGET_TESTS)
 
 # Final executable build step
 $(BUILD_DIR)/$(TARGET_EXEC): $(SRC_OBJS)
-	$(CC) $(SRC_OBJS) -o $@ $(LDFLAGS)
+	$(CC) $(SRC_OBJS) -o $@ $(LIBS)
 
 # Rule for building C source files
 $(BUILD_DIR)/%.c.o: %.c
@@ -47,7 +50,7 @@ SRC_OBJS_NO_MAIN := $(SRC_NO_MAIN:%=$(BUILD_DIR)/%.o)
 
 $(TARGET_TESTS): $(SRC_OBJS_NO_MAIN) $(TEST_OBJS)
 	mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(INC_FLAGS) -o $@ $^ $(OPENSSL_LIBS) $(CUNIT_LIBS) $(LDFLAGS)
+	$(CC) $(CFLAGS) $(INC_FLAGS) -o $@ $^ $(LIBS)
 
 # Run tests
 test: $(TARGET_TESTS)

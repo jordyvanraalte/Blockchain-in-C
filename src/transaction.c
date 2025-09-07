@@ -273,41 +273,6 @@ int add_transaction_signature(Transaction* transaction, TxSignInput* signature) 
     return 0; // Success, caller should free the signature after use
 }
 
-int serialize_transaction_to_json(Transaction* transaction, unsigned char** buffer, size_t* length) {
-    if (!transaction || !buffer || !length) return -1;
-
-    // Estimate the size needed for serialization
-    size_t size = 1024; // Initial buffer size
-    unsigned char* buf = malloc(size);
-    if (!buf) return -1;
-
-    size_t offset = 0;
-    offset += snprintf((char*)buf + offset, size - offset, "id:%s,timestamp:%ld,inputCount:%d,outputCount:%d,isCoinbase:%d;", 
-                       transaction->id, transaction->timestamp, transaction->inputCount, transaction->outputCount, transaction->isCoinbase);
-
-    // Serialize inputs
-    for (int i = 0; i < transaction->inputCount; i++) {
-        TxInput* input = transaction->inputs[i];
-        offset += snprintf((char*)buf + offset, size - offset, "input%d:address:%s,amount:%u;", 
-                           i, input->address, input->amount);
-    }
-
-    // Serialize outputs
-    for (int i = 0; i < transaction->outputCount; i++) {
-        TxOutput* output = transaction->outputs[i];
-        offset += snprintf((char*)buf + offset, size - offset, "output%d:address:%s,amount:%u;", 
-                           i, output->address, output->amount);
-    }
-
-    *buffer = buf;
-    *length = offset;
-    return 0; // Success
-}
-
-int deserialize_transaction_from_json(const unsigned char* data, size_t length, Transaction** transaction) {
-    // TODO implement
-}
-
     
 
 char* calculate_transaction_hash(Transaction* transaction) {
@@ -315,7 +280,8 @@ char* calculate_transaction_hash(Transaction* transaction) {
 
     unsigned char* serialized = NULL;
     size_t length = 0;
-    if (serialize_transaction_to_json(transaction, &serialized, &length) != 0) {
+    // do not include signatures in the serialization
+    if (serialize_transaction_to_json(transaction, &serialized, &length, false) != 0) {
         fprintf(stderr, "Failed to serialize transaction for hashing\n");
         return NULL;
     }
@@ -360,6 +326,249 @@ int sign_input(TxSignInput** signature, TxInput* input, Transaction* transaction
     return 0; // Success
 }
 
+static void signature_to_hex(struct json_object* jsig, TxSignInput* sig) {
+    if (!jsig || !sig || !sig->signature || sig->signatureLength == 0) return;
+
+    // Convert signature to hex string x2 for bytes + null terminator
+    char* sigHex = malloc(sig->signatureLength * 2 + 1);
+    if (!sigHex) return;
+
+    // write each byte as two hex characters
+    for (size_t k = 0; k < sig->signatureLength; k++) {
+        sprintf(&sigHex[k * 2], "%02x", sig->signature[k]);
+    }
+    sigHex[sig->signatureLength * 2] = '\0'; // Null-terminate the string
+
+    json_object_object_add(jsig, "signature", json_object_new_string(sigHex));
+    free(sigHex);
+}
+
+int serialize_transaction_to_json(Transaction* transaction, unsigned char** buffer, size_t* length, bool includeSignatures) {
+    if (!transaction || !buffer || !length) return -1;
+
+    // SERIALIZE USING JSON-C
+
+    struct json_object *jobj = json_object_new_object();
+    if (!jobj) return -1;
+
+    json_object_object_add(jobj, "id", json_object_new_string(transaction->id));
+    json_object_object_add(jobj, "timestamp", json_object_new_int64((int64_t)transaction->timestamp));
+    json_object_object_add(jobj, "inputCount", json_object_new_int(transaction->inputCount));
+    json_object_object_add(jobj, "outputCount", json_object_new_int(transaction->outputCount));
+    json_object_object_add(jobj, "isCoinbase", json_object_new_boolean(transaction->isCoinbase));
+
+    // Serialize inputs
+    struct json_object *jinputs = json_object_new_array();
+    for (int i = 0; i < transaction->inputCount; i++) {
+        TxInput* input = transaction->inputs[i];
+        struct json_object *jinput = json_object_new_object();
+        json_object_object_add(jinput, "address", json_object_new_string(input->address));
+        json_object_object_add(jinput, "amount", json_object_new_int(input->amount));
+        json_object_array_add(jinputs, jinput);
+    }
+
+    json_object_object_add(jobj, "inputs", jinputs);
+    
+    // Serialize outputs
+    struct json_object *joutputs = json_object_new_array();
+    for (int i = 0; i < transaction->outputCount; i++) {
+        TxOutput* output = transaction->outputs[i];
+        struct json_object *joutput = json_object_new_object();
+        json_object_object_add(joutput, "address", json_object_new_string(output->address));
+        json_object_object_add(joutput, "amount", json_object_new_int(output->amount));
+        json_object_array_add(joutputs, joutput);
+    }
+
+    json_object_object_add(jobj, "outputs", joutputs);
+
+    if (includeSignatures) {
+        // Serialize signatures
+        struct json_object *jsignatures = json_object_new_array();
+        for (int i = 0; i < transaction->signatureCount; i++) {
+            TxSignInput* sig = transaction->signatures[i];
+            struct json_object *jsig = json_object_new_object();
+            json_object_object_add(jsig, "message", json_object_new_string(sig->message));
+            json_object_object_add(jsig, "address", json_object_new_string(sig->address));
+
+            char* pubKeyPEM = NULL;
+            size_t pubKeyPEMLen = 0;
+            get_public_key_pem(sig->publicKey, &pubKeyPEM, &pubKeyPEMLen);
+            if (pubKeyPEM) {
+                json_object_object_add(jsig, "publicKey", json_object_new_string(pubKeyPEM));
+                free(pubKeyPEM);    
+            } else {
+                json_object_object_add(jsig, "publicKey", json_object_new_string(""));
+            }
+
+            // Encode signature to hex
+            signature_to_hex(jsig, sig);
+            json_object_array_add(jsignatures, jsig);
+        }
+        json_object_object_add(jobj, "signatures", jsignatures);
+        json_object_object_add(jobj, "signatureCount", json_object_new_int(transaction->signatureCount));
+     }
+
+    const char* jsonStr = json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PLAIN);
+    if (!jsonStr) {
+        json_object_put(jobj); // Free JSON object
+        return -1;
+    }
+
+    size_t jsonStrLen = strlen(jsonStr);
+    unsigned char* buf = malloc(jsonStrLen + 1);
+    if (!buf) {
+        json_object_put(jobj); // Free JSON object
+        return -1;
+    }
+
+    memcpy(buf, jsonStr, jsonStrLen + 1); // Include null terminator
+    *buffer = buf;
+    *length = jsonStrLen;
+
+    json_object_put(jobj); // Free JSON object
+    return 0; // Success
+}
+
+int deserialize_transaction_from_json(const unsigned char* data, size_t length, Transaction** transaction) {
+    if (!data || length == 0 || !transaction) return -1;
+
+    struct json_object *jobj = json_tokener_parse((const char*)data);
+    if (!jobj) {
+        fprintf(stderr, "Failed to parse JSON data\n");
+        return -1;
+    }
+
+    *transaction = malloc(sizeof(Transaction));
+    if (!*transaction) {
+        fprintf(stderr, "Memory allocation failed for Transaction\n");
+        json_object_put(jobj);
+        return -1;
+    }
+    memset(*transaction, 0, sizeof(Transaction)); // Zero out the transaction
+
+    // Parse basic fields
+    struct json_object *jfield;
+    
+    if (json_object_object_get_ex(jobj, "id", &jfield)) {
+        const char* idStr = json_object_get_string(jfield);
+        strncpy((*transaction)->id, idStr, UUID_ID_LENGTH);
+        (*transaction)->id[UUID_ID_LENGTH - 1] = '\0'; // Ensure null termination
+    }
+
+    if (json_object_object_get_ex(jobj, "timestamp", &jfield)) {
+        (*transaction)->timestamp = (time_t)json_object_get_int64(jfield);
+    }
+
+    if (json_object_object_get_ex(jobj, "inputCount", &jfield)) {
+        (*transaction)->inputCount = (uint8_t)json_object_get_int(jfield);
+    }
+
+    if (json_object_object_get_ex(jobj, "outputCount", &jfield)) {
+        (*transaction)->outputCount = (uint8_t)json_object_get_int(jfield);
+    }
+
+    if (json_object_object_get_ex(jobj, "signatureCount", &jfield)){
+        (*transaction)->signatureCount = (uint8_t)json_object_get_int(jfield);
+    }
+
+    if (json_object_object_get_ex(jobj, "isCoinbase", &jfield)) {
+        (*transaction)->isCoinbase = json_object_get_boolean(jfield);
+    }
+
+    // Parse inputs
+    if (json_object_object_get_ex(jobj, "inputs", &jfield)) {
+        int inputArrayLen = json_object_array_length(jfield);
+        for (int i = 0; i < inputArrayLen && i < MAX_INPUTS; i++) {
+            struct json_object *jinput = json_object_array_get_idx(jfield, i);
+            TxInput* input = malloc(sizeof(TxInput));
+            if (!input) continue; // Skip on memory allocation failure
+
+            struct json_object *jaddr, *jamount;
+            if (json_object_object_get_ex(jinput, "address", &jaddr)) {
+                const char* addrStr = json_object_get_string(jaddr);
+                strncpy(input->address, addrStr, MAX_ADDRESS_LENGTH);
+                input->address[MAX_ADDRESS_LENGTH - 1] = '\0'; // Ensure null termination
+            }
+
+            if (json_object_object_get_ex(jinput, "amount", &jamount)) {
+                input->amount = (uint32_t)json_object_get_int(jamount);
+            }
+            (*transaction)->inputs[i] = input;
+        }
+    }
+
+    // Parse outputs
+    if (json_object_object_get_ex(jobj, "outputs", &jfield)) {
+        int outputArrayLen = json_object_array_length(jfield);
+        for (int i = 0; i < outputArrayLen && i < MAX_OUTPUTS; i++) {
+            struct json_object *joutput = json_object_array_get_idx(jfield, i);
+            TxOutput* output = malloc(sizeof(TxOutput));
+            if (!output) continue; // Skip on memory allocation failure
+            
+            struct json_object *jaddr, *jamount;
+            if (json_object_object_get_ex(joutput, "address", &jaddr)) {
+                const char* addrStr = json_object_get_string(jaddr);
+                strncpy(output->address, addrStr, MAX_ADDRESS_LENGTH);
+                output->address[MAX_ADDRESS_LENGTH - 1] = '\0'; // Ensure null termination
+            }
+
+            if (json_object_object_get_ex(joutput, "amount", &jamount)) {
+                output->amount = (uint32_t)json_object_get_int(jamount);
+            }
+            (*transaction)->outputs[i] = output;
+        }
+    }
+
+    // Parse signatures if present
+    if (json_object_object_get_ex(jobj, "signatures", &jfield)) {
+        int sigArrayLen = json_object_array_length(jfield);
+        for (int i = 0; i < sigArrayLen && i < MAX_SIGNATURES; i++) {
+            struct json_object *jsig = json_object_array_get_idx(jfield, i);
+            TxSignInput* sig = malloc(sizeof(TxSignInput));
+            if (!sig) continue; // Skip on memory allocation failure
+            
+            memset(sig, 0, sizeof(TxSignInput));    
+            struct json_object *jmsg, *jaddr, *jpubKey, *jsignature;
+            if (json_object_object_get_ex(jsig, "message", &jmsg)) {
+                const char* msgStr = json_object_get_string(jmsg);
+                sig->message = strdup(msgStr); // Allocate and copy
+            }
+
+            if (json_object_object_get_ex(jsig, "address", &jaddr)) {
+                const char* addrStr = json_object_get_string(jaddr);
+                strncpy(sig->address, addrStr, MAX_ADDRESS_LENGTH);
+                sig->address[MAX_ADDRESS_LENGTH - 1] = '\0'; // Ensure null termination
+            }
+
+            if (json_object_object_get_ex(jsig, "publicKey", &jpubKey)) {
+                const char* pubKeyStr = json_object_get_string(jpubKey);
+                sig->publicKey = load_public_key_from_pem(pubKeyStr);
+            }
+
+            if (json_object_object_get_ex(jsig, "signature", &jsignature)) {
+                const char* sigHexStr = json_object_get_string(jsignature);
+                size_t sigHexLen = strlen(sigHexStr);
+                if (sigHexLen % 2 == 0) {
+                    size_t sigLen = sigHexLen / 2;
+                    sig->signature = OPENSSL_malloc(sigLen);
+                    if (sig->signature) {
+                        sig->signatureLength = sigLen;
+                        for (size_t k = 0; k < sigLen; k++) {
+                            sscanf(&sigHexStr[k * 2], "%2hhx", &sig->signature[k]);
+                        }
+                    }
+                }
+            }
+
+            (*transaction)->signatures[i] = sig;
+
+        }
+    }
+
+    json_object_put(jobj); // Free JSON object
+    return 0; // Success
+}
+
 // create function to serialize transaction for signing. do not use the serialized json directly since it contains the signatures
 char* serialize_transaction_for_signing(Transaction* transaction) {
     if (!transaction) return NULL;
@@ -367,7 +576,7 @@ char* serialize_transaction_for_signing(Transaction* transaction) {
     unsigned char *data = NULL;
     size_t dataLen = 0;
     // do not include signatures in the serialization
-    if (serialize_transaction_to_json(transaction, &data, &dataLen) != 0) {
+    if (serialize_transaction_to_json(transaction, &data, &dataLen, false) != 0) {
         fprintf(stderr, "Failed to serialize transaction for signing\n");
         return NULL;
     }

@@ -75,7 +75,7 @@ char* calculate_block_hash(Block* block) {
 
     char* serialized = NULL;
     size_t length = 0;
-    if (serialize_block(block, &serialized, &length) != 0) {
+    if (serialize_block_to_json(block, &serialized, &length) != 0) {
         fprintf(stderr, "Failed to serialize block for hashing\n");
         return NULL;
     }
@@ -105,71 +105,137 @@ char* calculate_block_hash(Block* block) {
 }
 
 // serialize as JSON
-int serialize_block(Block* block, char** serialized, size_t* length) {
+int serialize_block_to_json(Block* block, char** serialized, size_t* length) {
     if (!block || !serialized || !length) return -1;
+    
+    BlockHeader* header = &block->header;
 
-    // Estimate size needed for serialization
-    size_t size = 1024; // Base size for block metadata
-    // could be more flexibale with dynamic allocation, but this is simpler for now
+    // implement with cjson
+    struct json_object *jsonHeader = json_object_new_object();
+    json_object_object_add(jsonHeader, "version", json_object_new_int64(header->version));
+    json_object_object_add(jsonHeader, "blockHeight", json_object_new_int64(header->blockHeight));
+    json_object_object_add(jsonHeader, "timestamp", json_object_new_int64(header->timestamp));
+    json_object_object_add(jsonHeader, "nonce", json_object_new_int64(header->nonce));
+    json_object_object_add(jsonHeader, "difficulty", json_object_new_int64(header->difficulty));
+    json_object_object_add(jsonHeader, "previousHash", json_object_new_string(header->previousHash));
 
-    for(int i = 0; i < block->transactionCount; i++) {
-        size += 512; // Estimate size per transaction
-    }
-
-    char* buf = malloc(size);
-    if (!buf) return -1;
-
-    int offset = 0;
-    offset += snprintf(buf + offset, size - offset, "{\"version\": %u, \"blockHeight\": %llu, \"timestamp\": %ld, \"nonce\": %llu, \"difficulty\": %llu, \"previousHash\": \"%s\", \"note\": \"%s\", \"transactions\": [",
-                       block->header.version,
-                       block->header.blockHeight,
-                       block->header.timestamp,
-                       block->header.nonce,
-                       block->header.difficulty,
-                       block->header.previousHash ? block->header.previousHash : "",
-                       block->note ? block->note : "");
-
+    struct json_object *jsonBlock = json_object_new_object();
+    json_object_object_add(jsonBlock, "header", jsonHeader);
+    json_object_object_add(jsonBlock, "transactionCount", json_object_new_int(block->transactionCount));
+    json_object_object_add(jsonBlock, "note", json_object_new_string(block->note));
+    
+    struct json_object *jsonTransactions = json_object_new_array();
     for (int i = 0; i < block->transactionCount; i++) {
-        Transaction* currentTransaction = block->transactions[i];
-        unsigned char* txSerialized = NULL;
-        size_t txLength = 0;
-        if (serialize_transaction_to_json(currentTransaction, &txSerialized, &txLength) != 0) {
-            fprintf(stderr, "Failed to serialize transaction in block %s\n", block->header.blockHeight);
-            free(buf);
-            return -1;
+        Transaction* tx = block->transactions[i];
+        if (!tx) break;
+
+        unsigned char* txData = NULL;
+        size_t txDataLen = 0;
+        if (serialize_transaction_to_json(tx, &txData, &txDataLen, true) != 0) {
+            fprintf(stderr, "Failed to serialize transaction %s\n", tx->id);
+            continue; // Skip this transaction
         }
 
-        offset += snprintf(buf + offset, size - offset, "%s", txSerialized);
-        free(txSerialized);
-
-        if (i < block->transactionCount - 1) {
-            offset += snprintf(buf + offset, size - offset, ", ");
+        struct json_object *jsonTx = json_tokener_parse((const char*)txData);
+        if (jsonTx) {
+            json_object_array_add(jsonTransactions, jsonTx);
+        } else {
+            fprintf(stderr, "Failed to parse serialized transaction JSON for %s\n", tx->id);
         }
-
-        offset += snprintf(buf + offset, size - offset, "] }");
+        free(txData);
     }
 
-    // save results
-    *serialized = buf;
-    *length = offset;
+    json_object_object_add(jsonBlock, "transactions", jsonTransactions);
+    const char* jsonStr = json_object_to_json_string_ext(jsonBlock, JSON_C_TO_STRING_PLAIN);
+    if (!jsonStr) {
+        json_object_put(jsonBlock); // Free JSON object
+        return -1;
+    }
 
+    size_t jsonStrLen = strlen(jsonStr);
+    char* buf = malloc(jsonStrLen + 1);
+    if (!buf) {
+        json_object_put(jsonBlock); // Free JSON object
+        return -1;
+    }
+
+    memcpy(buf, jsonStr, jsonStrLen + 1); // Include null terminator
+    *serialized = buf;
+    *length = jsonStrLen;
+    json_object_put(jsonBlock); // Free JSON object
+    
     return 0; // Success
 }
 
 // from json to block
-Block* deserialize_block(const char* data) {
-    Block* block = malloc(sizeof(Block));
-    if (!block) {
-        fprintf(stderr, "Memory allocation failed for Block\n");
-        return NULL;
+int deserialize_block(const char* data, Block** block) {
+    if (!data) return 1;
+
+    struct json_object *jobj = json_tokener_parse(data);
+    if (!jobj) {
+        fprintf(stderr, "Failed to parse JSON data for block\n");
     }
 
-    memset(block, 0, sizeof(Block)); // Zero out the block memory
-    BlockHeader* header = &block->header;
-    
+    *block = malloc(sizeof(Block)); 
+    if (!*block) {
+        fprintf(stderr, "Memory allocation failed for Block\n");
+        json_object_put(jobj);
+        return 1;
+    }
 
+    struct json_object *jheader, *jtransactions, *jnote;
+    if (json_object_object_get_ex(jobj, "header", &jheader)) {
+        struct json_object *jversion, *jblockHeight, *jtimestamp, *jnonce, *jdifficulty, *jpreviousHash;
+        if (json_object_object_get_ex(jheader, "version", &jversion)) {
+            (*block)->header.version = json_object_get_int(jversion);
+        }
+        if (json_object_object_get_ex(jheader, "blockHeight", &jblockHeight)) {
+            (*block)->header.blockHeight = json_object_get_int64(jblockHeight);
+        }
+        if (json_object_object_get_ex(jheader, "timestamp", &jtimestamp)) {
+            (*block)->header.timestamp = json_object_get_int64(jtimestamp);
+        }
+        if (json_object_object_get_ex(jheader, "nonce", &jnonce)) {
+            (*block)->header.nonce = json_object_get_int64(jnonce);
+        }
+        if (json_object_object_get_ex(jheader, "difficulty", &jdifficulty)) {
+            (*block)->header.difficulty = json_object_get_int64(jdifficulty);
+        }
+        if (json_object_object_get_ex(jheader, "previousHash", &jpreviousHash)) {
+            const char* prevHashStr = json_object_get_string(jpreviousHash);
+            strncpy((*block)->header.previousHash, prevHashStr, HASH_LENGTH);
+            (*block)->header.previousHash[HASH_LENGTH - 1] = '\0'; // Ensure null termination
+        }
+    }
 
-    return NULL;
+    if (json_object_object_get_ex(jobj, "transactionCount", &jheader)) {
+        (*block)->transactionCount = (uint16_t)json_object_get_int(jheader);
+    }
+
+    if (json_object_object_get_ex(jobj, "note", &jnote)) {
+        const char* noteStr = json_object_get_string(jnote);
+        strncpy((*block)->note, noteStr, MAX_NOTES_LENGTH);
+        (*block)->note[MAX_NOTES_LENGTH - 1] = '\0'; // Ensure null termination
+    }
+
+    if (json_object_object_get_ex(jobj, "transactions", &jtransactions)) {
+        int txArrayLen = json_object_array_length(jtransactions);
+        for (int i = 0; i < txArrayLen && i < MAX_TRANSACTIONS_PER_BLOCK; i++) {
+            struct json_object *jtx = json_object_array_get_idx(jtransactions, i);
+            const char* txStr = json_object_to_json_string(jtx);
+            if (txStr) {
+                Transaction* tx = NULL;
+                if (deserialize_transaction_from_json((const unsigned char*)txStr, strlen(txStr), &tx) == 0) {
+                    (*block)->transactions[i] = tx;
+                } else {
+                    fprintf(stderr, "Failed to deserialize transaction from JSON in block\n");
+                }
+            }
+        }
+    }
+
+    json_object_put(jobj); // Free JSON object
+    return 0; // Success
 }
 
 void print_block(Block* block) {

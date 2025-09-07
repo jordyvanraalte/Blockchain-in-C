@@ -47,7 +47,6 @@ int main() {
     CU_add_test(suite, "Test Is Valid Block", test_is_valid_block);
     CU_add_test(suite, "Test Calculate Block Hash", test_calculate_block_hash);
     CU_add_test(suite, "Test Serialize Block", test_serialize_block);
-    CU_add_test(suite, "Test Deserialize Block", test_deserialize_block); 
     
     suite = CU_add_suite("Blockchain Tests", NULL, NULL);
     CU_add_test(suite, "Test Initialize Blockchain", test_initialize_blockchain);

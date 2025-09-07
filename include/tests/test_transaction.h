@@ -7,7 +7,7 @@
 #include "transaction.h"
 #include "wallet.h"
 
-static void cleanup_transaction(Transaction* transaction);
+void cleanup_transaction(Transaction* transaction);
 
 void test_is_valid_transaction(void);
 void test_validate_inputs(void);

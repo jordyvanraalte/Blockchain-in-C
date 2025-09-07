@@ -1,6 +1,6 @@
 #include "tests/test_transaction.h"
 
-static void cleanup_transaction(Transaction* transaction) {
+void cleanup_transaction(Transaction* transaction) {
     if (!transaction) return;
 
     for (int i = 0; i < transaction->inputCount; i++) {
@@ -357,12 +357,28 @@ void test_serialize_to_json(void) {
 
     unsigned char* buffer = NULL;
     size_t length = 0;
-    int serialize_result = serialize_transaction_to_json(tx, &buffer, &length);
+    int serialize_result = serialize_transaction_to_json(tx, &buffer, &length, true);
     CU_ASSERT_EQUAL(serialize_result, 0);
     CU_ASSERT_PTR_NOT_NULL(buffer);
     CU_ASSERT(length > 0);
 
-    printf("Serialized Transaction JSON: %.*s\n", (int)length, buffer);
+    // deserialize to check
+    Transaction* deserialized_tx = NULL;
+    int deserialize_result = deserialize_transaction_from_json(buffer, length, &deserialized_tx);
+    CU_ASSERT_EQUAL(deserialize_result, 0);
+    
+    CU_ASSERT_PTR_NOT_NULL(deserialized_tx);
+    CU_ASSERT_STRING_EQUAL(deserialized_tx->id, tx->id);
+    CU_ASSERT_EQUAL(deserialized_tx->inputCount, tx->inputCount);
+    CU_ASSERT_EQUAL(deserialized_tx->outputCount, tx->outputCount);
+    CU_ASSERT_EQUAL(deserialized_tx->signatureCount, tx->signatureCount);
+    CU_ASSERT_EQUAL(deserialized_tx->isCoinbase, tx->isCoinbase);
+    CU_ASSERT_EQUAL(deserialized_tx->inputs[0]->amount, tx->inputs[0]->amount);
+    CU_ASSERT_STRING_EQUAL(deserialized_tx->inputs[0]->address, tx->inputs[0]->address);
+    CU_ASSERT_EQUAL(deserialized_tx->outputs[0]->amount, tx->outputs[0]->amount);
+    CU_ASSERT_STRING_EQUAL(deserialized_tx->outputs[0]->address, tx->outputs[0]->address);
+    CU_ASSERT_EQUAL(deserialized_tx->signatures[0]->signatureLength, tx->signatures[0]->signatureLength);
+    CU_ASSERT_STRING_EQUAL(deserialized_tx->signatures[0]->address, tx->signatures[0]->address);
 
     // Clean up
     free(buffer);
