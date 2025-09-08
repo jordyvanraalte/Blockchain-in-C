@@ -75,7 +75,6 @@ void test_initialize_blockchain(void) {
     CU_ASSERT_PTR_NOT_NULL(blockchain->latestBlock);
     CU_ASSERT_EQUAL(blockchain->blockCount, 1); // Genesis block should be present
     CU_ASSERT_EQUAL(blockchain->mempoolCount, 0);
-    CU_ASSERT_PTR_NULL(blockchain->blocks); // blocks array should be NULL initially
     cleanup(blockchain);
     free(blockchain);
 }

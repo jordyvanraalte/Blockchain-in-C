@@ -2,10 +2,9 @@
 
 int mine_block(Blockchain* blockchain, Block** block, char* miningAddress, int difficulty, char* notes) {
     if (!block) return 1;
-    
-    int verifiedCount = 0;
 
     // verify transactions from the mempool and build a linked list of verified transactions
+    int verifiedCount = 0;
     Transaction *verifiedHead = NULL, *verifiedTail = NULL;
     for (int i = 0; i < blockchain->mempoolCount; i++) {
         Transaction *tx = blockchain->mempool[i];
@@ -30,6 +29,7 @@ int mine_block(Blockchain* blockchain, Block** block, char* miningAddress, int d
         fprintf(stderr, "Failed to create coinbase transaction\n");
         return 1;
     }
+
     coinbaseTx->next = verifiedHead;
     verifiedHead = coinbaseTx;
     verifiedCount++;

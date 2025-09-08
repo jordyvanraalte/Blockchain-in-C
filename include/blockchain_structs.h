@@ -77,7 +77,6 @@ typedef struct Block {
 } Block;
 
 typedef struct Blockchain {
-    Block* blocks;
     uint64_t blockCount; 
     Block* latestBlock;
     Transaction* mempool[MAX_MEMPOOL_SIZE];

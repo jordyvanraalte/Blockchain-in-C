@@ -1,5 +1,6 @@
 #include "node.h"
 
+// todo add wallet as optional parameter
 Node* initialize_node(char* host, int port) {
     Node* node = (Node*)malloc(sizeof(Node));
     Blockchain* blockchain = (Blockchain*)malloc(sizeof(Blockchain));
@@ -79,8 +80,9 @@ int start_node(Node* node, const char* peerHost, int peerPort, bool mining) {
         pthread_detach(mining_thread);
     }
 
-    // If peer info is provided, connect to the peer and synchronize blockchain
+    // if peer provided connect to it
     if (peerHost && peerPort > 0) {
+        send_connect(NULL, node->id);
         synchronize_blockchain(node->blockchain, peerHost, peerPort);
     }
 
@@ -94,13 +96,15 @@ void* start_client(void* arg) {
     
     if (!node  <= 0) return NULL;
 
-    while (!node->isRunning) {
+    while (node->isRunning) {
         for (int i = 0; i < node->peerCount; i++) {
             Peer* peer = &node->peers[i];
             synchronize_blockchain(node->blockchain, peer->host, peer->port);
-
         }
-        sleep(30000); // 30 seconds
+
+        // ping peers every 30 seconds
+
+        sleep(30); // 30 seconds
     }
 
     return NULL;
@@ -155,8 +159,6 @@ void* start_server(void* arg) {
             continue; // Continue accepting other connections
         }
 
-        add_peer(node, inet_ntoa(address.sin_addr), ntohs(address.sin_port));
-
         // Handle the new connection (e.g., spawn a new thread or process)
         printf("New connection accepted\n");
         handle_incoming_connection(new_socket, inet_ntoa(address.sin_addr), ntohs(address.sin_port), node, node->blockchain);
@@ -168,7 +170,31 @@ void* start_server(void* arg) {
     close(server_fd);
 }
 
-int add_peer(Node* node, const char* host, int port) {
+void stop_node(Node* node) {
+    if (!node) return;
+
+    printf("Stopping node...\n");
+
+    broadcast_disconnect(node);
+    sleep(2); // wait for messages to be sent
+
+    node->isRunning = false;
+    node->isMining = false;
+
+    //wait until threads finish. Not the safest option, but just wait one minute
+    // it would be better to use condition variables or join threads properly
+    sleep(60);
+
+    // Clean up resources
+    if (node->blockchain) {
+        free(node->blockchain); // TODO add cleanup function
+    }
+
+    printf("Node stopped.\n");
+
+}
+
+int add_peer(Node* node, const char* peerId, const char* host, int port) {
     if (!node || !host || port <= 0) return -1;
 
     if (node->peerCount >= MAX_PEERS) {
@@ -178,21 +204,16 @@ int add_peer(Node* node, const char* host, int port) {
 
     Peer* peer = &node->peers[node->peerCount];
 
-    // Generate UUID for the peer
-    char id[UUID_ID_LENGTH];
-    generate_uuid(id);
-    strncpy(peer->id, id, UUID_ID_LENGTH);
-
+    strncpy(peer->id, peerId, UUID_ID_LENGTH);
     peer->host = strdup(host); // Allocate memory for host string
     peer->port = port;
-
     node->peerCount++;
     printf("Added new peer: %s:%d (Total peers: %d)\n", host, port, node->peerCount);
+    
     return 0; // Success
 }
 
 void* start_mining(void* arg) {
-    // TODO change input to struct with all params
     Node* node = (Node*)arg;
     Blockchain* blockchain = node->blockchain;
     const char* miningAddress = node->wallet->addresses[0]->address;
@@ -204,20 +225,24 @@ void* start_mining(void* arg) {
     }
 
     // Mining loop
-    while (true) {
-        // Create a new block with transactions from the mempool
-        Block* newBlock = NULL;
-        if (create_block(&newBlock, blockchain->latestBlock, blockchain->mempool[0], 0, difficulty, blockchain->latestBlock->header.previousHash, "Mined by node") != 0) {
-            fprintf(stderr, "Failed to create new block for mining\n");
-            continue; // Try again
+    while (node->isMining) {
+        // check if there are transactions in the mempool
+        if( blockchain->mempoolCount <= 0) {
+            sleep(1); // Wait before checking again
+            continue;
         }
 
-        // Mine the block
+        printf("Starting mining process with %d transactions in mempool...\n", blockchain->mempoolCount);
+
+        // Create a new block with transactions from the mempool
+        Block* newBlock = NULL;
         if (mine_block(blockchain, &newBlock, miningAddress, difficulty, "Mined by node") == 0) {
             // Successfully mined a block
             printf("Successfully mined a new block at height %llu\n", newBlock->header.blockHeight);
             add_block(blockchain, newBlock);
             broadcast_new_block(node, blockchain, newBlock);
+            clear_mempool(blockchain);
+
         } else {
             // Mining failed or was interrupted
             free(newBlock);
@@ -344,6 +369,22 @@ void send_connect(const Peer* peer, const char* nodeId) {
     }
 }
 
+void send_disconnect(const Peer* peer, const char* nodeId) {
+    if (!peer) return;
+
+    PeerMessage message;
+    message.peerId = nodeId;
+    message.type = DISCONNECT;
+    message.data = NULL;
+    message.length = 0;
+
+    if (send_message(peer, &message) != 0) {
+        fprintf(stderr, "Failed to send DISCONNECT message to peer %s:%d\n", peer->host, peer->port);
+    } else {
+        printf("Sent DISCONNECT message to peer %s:%d\n", peer->host, peer->port);
+    }
+}
+
 void send_acknowledge(const Peer* peer, const char* nodeId) {
     if (!peer) return;
 
@@ -412,9 +453,13 @@ void handle_incoming_connection(int client_socket, const char* client_host, int 
     switch (message.type) {
         case CONNECT:
             printf("Received CONNECT message\n");
-            add_peer(node, client_host, client_port);
+            add_peer(node, message.peerId, client_host, client_port);
             get_peer(node, message.peerId, &peer);
             send_acknowledge(&peer, node->id);
+            break;
+        case ACKNOWLEDGE:
+            printf("Received ACKNOWLEDGE message\n");
+            add_peer(node, message.peerId, client_host, client_port);
             break;
         case DISCONNECT:
             printf("Received DISCONNECT message\n");
@@ -521,6 +566,14 @@ void broadcast_new_transaction(Blockchain* blockchain, Transaction* transaction)
     free(message.peerId);
 }
 
+void broadcast_ping(Node* node) {
+    if (!node) return;
+
+    for (int i = 0; i < node->peerCount; i++) {
+        send_ping(&node->peers[i], node->id);
+    }
+}
+
 void synchronize_blockchain(Blockchain* blockchain, const char* peerHost, int peerPort) {
     if (!blockchain || !peerHost || peerPort <= 0) return;
 
@@ -585,7 +638,7 @@ void free_node(Node* node) {
 
     if (node->blockchain) {
         // Free blockchain resources
-        free(node->blockchain);
+        //free(node->blockchain);
     }
     if (node->wallet) {
         //TODO//cleanup_wallet(node->wallet);
@@ -605,4 +658,19 @@ void get_peer(Node* node, const char* peerId, Peer* outPeer) {
             return;
         }
     }
+}
+
+void broadcast_disconnect(Node* node) {
+    if (!node) return;
+
+    for (int i = 0; i < node->peerCount; i++) {
+        send_disconnect(&node->peers[i], node->id);
+    }
+}
+
+// utils
+void cleanup_node(Node* node) {
+    if (!node) return;
+
+    free_node(node);
 }

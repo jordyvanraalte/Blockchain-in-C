@@ -38,7 +38,6 @@ int initialize_genesis_block(Block** block) {
 int initialize_blockchain(Blockchain* blockchain) {
     if (!blockchain) return -1;
 
-    blockchain->blocks = NULL;
     blockchain->blockCount = 0;
     blockchain->latestBlock = NULL;
     blockchain->mempoolCount = 0;

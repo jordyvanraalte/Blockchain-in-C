@@ -11,6 +11,7 @@
 #include "tests/test_block.h"
 #include "tests/test_blockchain.h"
 #include "tests/test_mine.h"
+#include "tests/test_node.h"
 
 int main() {
     CU_initialize_registry();
@@ -59,6 +60,12 @@ int main() {
 
     suite = CU_add_suite("Mining Tests", NULL, NULL);
     CU_add_test(suite, "Test Mine Block", test_mine_block);
+
+    suite = CU_add_suite("Node Tests", NULL, NULL);
+    // CU_add_test(suite, "Test Initialize Node", test_initialize_node);
+    // CU_add_test(suite, "Test Start Node", test_start_stop_node);
+    //CU_add_test(suite, "Test Start node with mining", test_start_node_with_mining);
+    CU_add_test(suite, "Test Add and remove peer", test_add_and_remove_peer);
 
     CU_basic_run_tests();
     CU_cleanup_registry();
