@@ -536,7 +536,7 @@ void broadcast_new_block(Node* node, Blockchain* blockchain, Block* block) {
     free(message.peerId);
 }
 
-void broadcast_new_transaction(Blockchain* blockchain, Transaction* transaction) {
+void broadcast_new_transaction(Node* node, Blockchain* blockchain, Transaction* transaction) {
     if (!blockchain || !transaction) return;
 
     // Serialize the transaction
@@ -554,14 +554,14 @@ void broadcast_new_transaction(Blockchain* blockchain, Transaction* transaction)
     message.length = length;
 
     // Send the transaction to all peers
-    for (int i = 0; i < blockchain->latestBlock->header.blockHeight && i < MAX_PEERS; i++) {
-        Peer peer; // Assume you have a way to get peers from the blockchain or node context
-        if (send_message(&peer, &message) != 0) {
-            fprintf(stderr, "Failed to send transaction to peer %s:%d\n", peer.host, peer.port);
+    for (int i = 0; i < node->peerCount; i++) {
+        if (send_message(&node->peers[i], &message) != 0) {
+            fprintf(stderr, "Failed to send transaction to peer %s:%d\n", node->peers[i].host, node->peers[i].port);
         } else {
-            printf("Broadcasted new transaction to peer %s:%d\n", peer.host, peer.port);
+            printf("Broadcasted new transaction to peer %s:%d\n", node->peers[i].host, node->peers[i].port);
         }
     }
+
     free(serializedTx);
     free(message.peerId);
 }

@@ -6,14 +6,14 @@ void test_generate_key_pair(void) {
     EVP_PKEY_free(key);
 }
 
-void save_and_load_private_key(void) {
+void save_and_load_private_key_from_file(void) {
     EVP_PKEY *key = generate_key_pair();
     CU_ASSERT_PTR_NOT_NULL(key);
 
     const char *filename = "test_private_key.pem";
     save_private_key_to_pem(key, filename);
 
-    EVP_PKEY *loadedKey = load_private_key_from_pem(filename);
+    EVP_PKEY *loadedKey = load_private_key_from_pem_file(filename);
     CU_ASSERT_PTR_NOT_NULL(loadedKey);
 
     // Compare the original and loaded keys
@@ -24,14 +24,14 @@ void save_and_load_private_key(void) {
     remove(filename); // Clean up the test file
 }
 
-void save_and_load_public_key(void) {
+void save_and_load_public_key_from_file(void) {
     EVP_PKEY *key = generate_key_pair();
     CU_ASSERT_PTR_NOT_NULL(key);
 
     const char *filename = "test_public_key.pem";
     save_public_key_to_pem(key, filename);
 
-    EVP_PKEY *loadedKey = load_public_key_from_pem(filename);
+    EVP_PKEY *loadedKey = load_public_key_from_pem_file(filename);
     CU_ASSERT_PTR_NOT_NULL(loadedKey);
 
     // Compare the original and loaded keys

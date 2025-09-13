@@ -6,7 +6,8 @@
 #include "utils/cryptography/keys.h"
 
 void test_generate_key_pair(void);
-void save_and_load_private_key(void);
-void save_and_load_public_key(void);
+void save_and_load_private_key_from_file(void);
+void save_and_load_public_key_from_file(void);
+
 
 #endif // TEST_KEYS_H

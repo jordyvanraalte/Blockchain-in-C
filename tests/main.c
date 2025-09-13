@@ -18,8 +18,8 @@ int main() {
     
     CU_pSuite suite = CU_add_suite("Utils Tests", NULL, NULL);
     CU_add_test(suite, "Test Key Pair Generation", test_generate_key_pair);
-    CU_add_test(suite, "Test Save and Load Private Key", save_and_load_private_key);
-    CU_add_test(suite, "Test Save and Load Public Key", save_and_load_public_key);
+    CU_add_test(suite, "Test Save and Load Private Key", save_and_load_private_key_from_file);
+    CU_add_test(suite, "Test Save and Load Public Key", save_and_load_public_key_from_file);
     CU_add_test(suite, "Test Successful Sign and Verify", test_succesful_sign_and_verify);
     CU_add_test(suite, "Test Failed Verify", test_failed_verify);
     CU_add_test(suite, "Test SHA-256 Hex", test_sha256_hex);
@@ -65,7 +65,8 @@ int main() {
     // CU_add_test(suite, "Test Initialize Node", test_initialize_node);
     // CU_add_test(suite, "Test Start Node", test_start_stop_node);
     //CU_add_test(suite, "Test Start node with mining", test_start_node_with_mining);
-    CU_add_test(suite, "Test Add and remove peer", test_add_and_remove_peer);
+    //CU_add_test(suite, "Test Add and remove peer", test_add_and_remove_peer);
+    CU_add_test(suite, "Test Full Node Network", test_node_network);
 
     CU_basic_run_tests();
     CU_cleanup_registry();

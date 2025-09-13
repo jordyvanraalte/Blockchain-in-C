@@ -78,7 +78,7 @@ void send_disconnect(const Peer* peer, const char* nodeId);
 
 void handle_incoming_connection(int client_socket, const char* client_host, int client_port, Node* node, Blockchain* blockchain);
 void broadcast_new_block(Node* node, Blockchain* blockchain, Block* block);
-void broadcast_new_transaction(Blockchain* blockchain, Transaction* transaction);
+void broadcast_new_transaction(Node* node, Blockchain* blockchain, Transaction* transaction);
 void broadcast_disconnect(Node* node);
 void synchronize_blockchain(Blockchain* blockchain, const char* peerHost, int peerPort);
 void receive_block(Blockchain* blockchain, Block* block);

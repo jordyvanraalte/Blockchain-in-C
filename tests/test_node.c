@@ -139,7 +139,47 @@ void test_add_and_remove_peer(void) {
     cleanup_node(node2);
 }
 
-void test_node_network(void);
+// test the full network with new transactions and new blocks + broadcasting
+void test_node_network(void) {
+    Node* node1 = initialize_node("127.0.0.1", 8082);
+    start_node(node1, NULL, 0, true); // miner node
+
+    Node* node2 = initialize_node("127.0.0.1", 8083);
+    start_node(node2, NULL, 0, false);
+
+    add_peer(node1, node2->id ,"127.0.0.1", 8083);
+    add_peer(node2, node1->id, "127.0.0.1", 8082);
+
+    sleep(5); // wait for connection
+
+    // create wallets and a transaction
+    Wallet *wallet1, *wallet2;
+    create_wallets(&wallet1, &wallet2);
+
+    Transaction* tx;
+    create_transaction(wallet1, wallet2, &tx);
+
+    // add transaction to node2
+    add_transaction(node2->blockchain, tx);
+    CU_ASSERT_EQUAL(node2->blockchain->mempoolCount, 1);
+
+    broadcast_new_transaction(node2, node2->blockchain, tx);
+
+    // after broadcasting, node  1 should be able to receive the transaction and mine a new block
+    sleep(60); // wait for mining
+
+    printf("Checking blockchain state after network test...\n");
+
+    CU_ASSERT_EQUAL(node1->blockchain->mempoolCount, 0); // Mempool should be cleared after mining
+    CU_ASSERT_EQUAL(node1->blockchain->blockCount, 2); // A new
+    CU_ASSERT_PTR_NOT_NULL(node1->blockchain->latestBlock);
+    CU_ASSERT_EQUAL(node1->blockchain->latestBlock->transactionCount, 2);
+    CU_ASSERT_TRUE(node1->blockchain->latestBlock->transactions[0]->isCoinbase); // The first transaction should be the coinbase
+    CU_ASSERT_EQUAL(node2->blockchain->mempoolCount, 0); // Mempool should be cleared after receiving new block
+    CU_ASSERT_EQUAL(node2->blockchain->blockCount, 2); // Node2
+    CU_ASSERT_STRING_EQUAL(calculate_block_hash(node1->blockchain->latestBlock), calculate_block_hash(node2->blockchain->latestBlock));
+ 
+}
 void synchronize_blockchain(Blockchain* blockchain, const char* peerHost, int peerPort);
 
 

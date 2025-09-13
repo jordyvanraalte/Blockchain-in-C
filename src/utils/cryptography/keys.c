@@ -82,7 +82,7 @@ void save_public_key_to_pem(EVP_PKEY* pkey, const char* filename) {
     return;
 }
 
-EVP_PKEY* load_private_key_from_pem(const char* filename) {
+EVP_PKEY* load_private_key_from_pem_file(const char* filename) {
     if (!filename) {
         fprintf(stderr, "Invalid filename to load_private_key_from_pem\n");
         return NULL;
@@ -105,7 +105,7 @@ EVP_PKEY* load_private_key_from_pem(const char* filename) {
     return pkey;
 }
 
-EVP_PKEY* load_public_key_from_pem(const char* filename) {
+EVP_PKEY* load_public_key_from_pem_file(const char* filename) {
     if (!filename) {
         fprintf(stderr, "Invalid filename to load_public_key_from_pem\n");
         return NULL;
@@ -122,6 +122,52 @@ EVP_PKEY* load_public_key_from_pem(const char* filename) {
 
     if (!pkey) {
         fprintf(stderr, "Failed to read public key from PEM file\n");
+        return NULL;
+    }
+
+    return pkey;
+}
+
+EVP_PKEY* load_private_key_from_pem(const char* pemStr) {
+    if (!pemStr) {
+        fprintf(stderr, "Invalid PEM string to load_private_key_from_pem\n");
+        return NULL;
+    }
+
+    BIO* bio = BIO_new_mem_buf(pemStr, -1);
+    if (!bio) {
+        fprintf(stderr, "Failed to create BIO for private key PEM\n");
+        return NULL;
+    }
+
+    EVP_PKEY* pkey = PEM_read_bio_PrivateKey(bio, NULL, NULL, NULL);
+    BIO_free(bio);
+
+    if (!pkey) {
+        fprintf(stderr, "Failed to read private key from PEM string\n");
+        return NULL;
+    }
+
+    return pkey;
+}
+
+EVP_PKEY* load_public_key_from_pem(const char* pemStr) {
+    if (!pemStr) {
+        fprintf(stderr, "Invalid PEM string to load_public_key_from_pem\n");
+        return NULL;
+    }
+
+    BIO* bio = BIO_new_mem_buf(pemStr, -1);
+    if (!bio) {
+        fprintf(stderr, "Failed to create BIO for public key PEM\n");
+        return NULL;
+    }
+
+    EVP_PKEY* pkey = PEM_read_bio_PUBKEY(bio, NULL, NULL, NULL);
+    BIO_free(bio);
+
+    if (!pkey) {
+        fprintf(stderr, "Failed to read public key from PEM string\n");
         return NULL;
     }
 
